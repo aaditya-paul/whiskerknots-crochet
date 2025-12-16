@@ -109,7 +109,9 @@ const ChatAssistant: React.FC = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-rose-400 text-white rounded-full shadow-lg hover:bg-rose-500 transition-colors flex items-center justify-center z-50"
+        className={` ${
+          isOpen ? "hidden" : "block"
+        } fixed bottom-6 right-6 w-16 h-16 bg-rose-400 text-white rounded-full shadow-lg hover:bg-rose-500 transition-colors flex items-center justify-center z-50`}
         animate={{
           scale: [1, 1.1, 1],
         }}
@@ -119,7 +121,7 @@ const ChatAssistant: React.FC = () => {
           repeatType: "loop",
         }}
       >
-        {isOpen ? <X size={28} /> : <MessageCircle size={28} />}
+        {isOpen ? null : <MessageCircle size={28} />}
       </motion.button>
 
       {/* Chat Modal */}
@@ -170,9 +172,15 @@ const ChatAssistant: React.FC = () => {
                       msg.role === "user"
                         ? "bg-rose-400 text-white rounded-tr-none"
                         : "bg-white text-gray-700 rounded-tl-none border border-gray-100"
-                    }`}
+                    }
+                   
+                    `}
                   >
-                    {msg.text}
+                    {msg?.text ? (
+                      msg.text
+                    ) : (
+                      <Sparkles className="text-rose-300 w-4 h-4" />
+                    )}
                   </div>
                 </motion.div>
               ))}
