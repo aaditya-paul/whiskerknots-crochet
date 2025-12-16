@@ -116,28 +116,28 @@ const Footer: React.FC = () => {
                 </button>
               </li>
               <li>
-                <a
-                  href="#"
+                <button
+                  onClick={() => router.push("/shipping")}
                   className="hover:text-rose-500 transition-colors cursor-pointer"
                 >
                   Shipping Policy
-                </a>
+                </button>
               </li>
               <li>
-                <a
-                  href="#"
+                <button
+                  onClick={() => router.push("/care")}
                   className="hover:text-rose-500 transition-colors cursor-pointer"
                 >
                   Care Instructions
-                </a>
+                </button>
               </li>
               <li>
-                <a
-                  href="#"
+                <button
+                  onClick={() => router.push("/returns")}
                   className="hover:text-rose-500 transition-colors cursor-pointer"
                 >
                   Returns
-                </a>
+                </button>
               </li>
             </ul>
           </div>
