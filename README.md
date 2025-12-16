@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Whiskerknots Crochet (v3)
 
-## Getting Started
+A small Next.js e-commerce / brochure site for Whiskerknots — a handmade crochet shop specializing in amigurumi, wearables, and home decor. This repository is a modern rewrite using Next.js App Router, Tailwind CSS, and a server-side AI chat assistant.
 
-First, run the development server:
+**Status:** Development
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+--
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Tech stack**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Next.js 16 (App Router)
+- React 19
+- Tailwind CSS v4
+- TypeScript
+- lucide-react (icons)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Features**
 
-## Learn More
+- Persistent `Navbar` and `Footer` via the app layout
+- Shop, About, Contact pages scaffolded
+- Floating AI chat assistant (server-side API proxy to Gemini)
+- Custom brand colors and fonts (Quicksand, Comfortaa)
 
-To learn more about Next.js, take a look at the following resources:
+**Project structure (key files)**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `app/layout.tsx` — root layout including `Navbar`, `Footer`, and `ChatAssistant`
+- `app/page.tsx` — home page
+- `components/` — UI components (Navbar, Footer, ChatAssistant, ProductCard, etc.)
+- `app/globals.css` — Tailwind import and CSS variables for brand colors and fonts
+- `app/api/chat/route.ts` — server-side API route that proxies to the Gemini API (keeps API key on server)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Local setup**
 
-## Deploy on Vercel
+1. Install dependencies
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   ```bash
+   npm install
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. Add environment variables
+
+   Create a `.env.local` file at the project root with:
+
+   ```env
+   GEMINI_API_KEY=your_server_side_api_key_here
+   ```
+
+   Note: The Gemini API key must remain server-side. Do NOT prefix it with `NEXT_PUBLIC_`.
+
+3. Run the dev server
+
+   ```bash
+   npm run dev
+   ```
+
+4. Build for production
+
+   ```bash
+   npm run build
+   npm run start
+   ```
+
+**Styling & fonts**
+
+- Global CSS is managed in `app/globals.css` and Tailwind is configured for v4. Brand colors are exposed as CSS variables with the `--color-` prefix so Tailwind utilities like `bg-cozy-cream` and `text-earthy-brown` work correctly.
+- The app loads Quicksand and Comfortaa via `next/font/google` in `app/layout.tsx`. The fonts are exposed as CSS variables and applied to the `body`.
+
+**Chat assistant**
+
+- `ChatAssistant` is a client component that POSTs messages to `/api/chat`.
+- The server route (`app/api/chat/route.ts`) uses the `@google/genai` SDK and the `GEMINI_API_KEY` environment variable to stream responses back to the client.
+
+**Security notes**
+
+- Keep `GEMINI_API_KEY` secret and do not commit `.env.local`.
+
+**Troubleshooting**
+
+- If you see "API key is missing" in the client, ensure you restarted the dev server after creating `.env.local` and that requests go to `/api/chat` (the client no longer reads `process.env.GEMINI_API_KEY`).
+- If Tailwind color utilities don't apply, ensure the CSS variables in `app/globals.css` use the `--color-` prefix (this repo already configures them as `--color-cozy-cream`, etc.).
+
+**Next steps / Ideas**
+
+- Add product data and product pages (static or server-side fetched)
+- Add cart persistence and checkout integration
+- Add unit / integration tests
+
+---
+
+If you'd like, I can also:
+
+- Create example product fixtures and a sample product page
+- Add a `.env.example` file and a simple deployment guide
+
+Enjoy! 🧶
