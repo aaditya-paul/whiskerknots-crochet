@@ -45,7 +45,9 @@ function CheckoutPage() {
   const tax = subtotal * 0.08; // 8% tax
   const total = subtotal + shipping + tax;
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -126,7 +128,8 @@ function CheckoutPage() {
 
           <div className="bg-warm-peach/20 rounded-2xl p-6 mb-8">
             <p className="text-sm text-gray-700">
-              <strong>Order Number:</strong> #WK-{Math.floor(Math.random() * 100000)}
+              <strong>Order Number:</strong> #WK-
+              {Math.floor(Math.random() * 100000)}
             </p>
           </div>
 
@@ -178,7 +181,9 @@ function CheckoutPage() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <h1 className="text-5xl font-bold text-earthy-brown mb-4">Checkout</h1>
+          <h1 className="text-5xl font-bold text-earthy-brown mb-4">
+            Checkout
+          </h1>
           <p className="text-gray-600 text-lg">
             Just a few more steps to get your handmade treasures! 🧶
           </p>
@@ -324,7 +329,10 @@ function CheckoutPage() {
                   Payment Information
                 </h3>
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
-                  <Lock size={20} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                  <Lock
+                    size={20}
+                    className="text-blue-500 flex-shrink-0 mt-0.5"
+                  />
                   <p className="text-sm text-blue-700">
                     Your payment information is secure and encrypted. We never
                     store your card details.
@@ -402,7 +410,9 @@ function CheckoutPage() {
                 whileTap={{ scale: isProcessing ? 1 : 0.98 }}
                 className="lg:hidden w-full bg-earthy-brown text-white font-bold py-4 rounded-2xl hover:bg-rose-400 transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isProcessing ? "Processing..." : `Place Order • $${total.toFixed(2)}`}
+                {isProcessing
+                  ? "Processing..."
+                  : `Place Order • $${total.toFixed(2)}`}
               </motion.button>
             </form>
           </motion.div>
