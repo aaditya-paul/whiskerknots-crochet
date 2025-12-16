@@ -209,11 +209,13 @@ function LoginForm() {
 
 function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-cozy-cream flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-rose-400 border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-cozy-cream flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-rose-400 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );
