@@ -24,10 +24,10 @@ const Footer: React.FC = () => {
                 <Heart size={20} fill="currentColor" />
               </div>
               <div className="flex flex-col items-start">
-                <span className="text-2xl font-bold text-earthy-brown tracking-tight">
+                <span className="text-2xl font-sans font-bold text-earthy-brown tracking-tight">
                   Whiskerknots
                 </span>
-                <span className="text-xs text-rose-400 font-medium tracking-widest uppercase">
+                <span className="text-xs font-sans text-rose-400 font-medium tracking-widest uppercase">
                   Loops of Love
                 </span>
               </div>

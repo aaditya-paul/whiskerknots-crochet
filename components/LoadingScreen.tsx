@@ -1,117 +1,123 @@
 "use client";
-import React from "react";
+
 import { motion } from "framer-motion";
-import { Heart } from "lucide-react";
+import { useEffect, useState } from "react";
 
-interface LoadingScreenProps {
-  message?: string;
-}
+const phrases = [
+  "Warming up the hooks...",
+  "Untangling the yarn...",
+  "Counting every stitch...",
+  "Knitting with love...",
+  "Almost cozy...",
+];
 
-const LoadingScreen: React.FC<LoadingScreenProps> = ({
-  message = "Stitching your cozy experience",
-}) => {
+export default function LoadingScreen() {
+  const [phraseIndex, setPhraseIndex] = useState(0);
+
+  // Cycle through cozy phrases
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhraseIndex((prev) => (prev + 1) % phrases.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-cozy-cream/95 backdrop-blur-sm"
-    >
-      {/* floating ambient blobs */}
-      <div className="pointer-events-none absolute inset-0">
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#fffdf7]">
+      {/* Ambient Floating Blobs */}
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          x: [-20, 20, -20],
+          y: [-20, 50, -20],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#ffdab9]/30 rounded-full blur-3xl"
+      />
+      <motion.div
+        animate={{
+          scale: [1, 1.3, 1],
+          x: [20, -40, 20],
+          y: [50, -20, 50],
+        }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#f4c2c2]/20 rounded-full blur-3xl"
+      />
+
+      <div className="relative flex flex-col items-center">
+        {/* Animated SVG Crochet Heart */}
+        <svg
+          width="120"
+          height="120"
+          viewBox="0 0 100 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="drop-shadow-sm"
+        >
+          <motion.path
+            d="M50 80C50 80 20 60 20 35C20 20 35 15 50 30C65 15 80 20 80 35C80 60 50 80 50 80Z"
+            stroke="#8d6e63" // earthy-brown
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="0 1"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+          {/* The "Hook" following the path */}
+          <motion.circle
+            r="3"
+            fill="#f4c2c2" // soft-rose
+            initial={{ offset: 0 }}
+            animate={{ offset: 1 }}
+            style={{
+              offsetPath:
+                "path('M50 80C50 80 20 60 20 35C20 20 35 15 50 30C65 15 80 20 80 35C80 60 50 80 50 80Z')",
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        </svg>
+
+        {/* Branding */}
         <motion.div
-          animate={{ scale: [1, 1.08, 1] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-24 -right-24 w-72 h-72 bg-yellow-200 rounded-full blur-3xl opacity-40"
-        />
-        <motion.div
-          animate={{ scale: [1, 1.12, 1] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute -bottom-24 -left-24 w-60 h-60 bg-rose-200 rounded-full blur-3xl opacity-40"
-        />
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-8 text-center"
+        >
+          <h2 className="font-serif text-2xl font-bold text-[#8d6e63] tracking-tight">
+            Whiskerknots
+          </h2>
+
+          {/* Rotating Phrases */}
+          <motion.p
+            key={phraseIndex}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="font-sans text-[#8d6e63]/60 text-sm mt-2 italic"
+          >
+            {phrases[phraseIndex]}
+          </motion.p>
+        </motion.div>
       </div>
 
-      <div className="relative z-10 p-8 bg-white rounded-[2.5rem] shadow-xl border border-gray-100 max-w-md w-full mx-4 flex flex-col items-center gap-6">
-        <div className="flex items-center gap-4">
-          <motion.div
-            aria-hidden
-            className="w-28 h-28 rounded-full bg-gradient-to-br from-rose-100 to-warm-peach flex items-center justify-center shadow-md"
-            animate={{ rotate: [0, 360] }}
-            transition={{ repeat: Infinity, duration: 18, ease: "linear" }}
-          >
-            {/* yarn ball: concentric strokes */}
-            <svg width="92" height="92" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#f4c2c2" />
-                  <stop offset="100%" stopColor="#ffdab9" />
-                </linearGradient>
-              </defs>
-              <circle cx="46" cy="46" r="28" fill="url(#g1)" stroke="#eec6c6" strokeWidth="2" />
-              <g stroke="#e7a8a8" strokeWidth="2" strokeLinecap="round">
-                <path d="M25 40c6-6 18-14 30-8" opacity="0.95" />
-                <path d="M30 52c8-8 22-20 34-12" opacity="0.85" />
-                <path d="M28 48c10 0 20-2 30-10" opacity="0.8" />
-                <path d="M42 30c2 6-2 18-12 24" opacity="0.7" />
-              </g>
-              <motion.circle
-                cx="78"
-                cy="14"
-                r="4"
-                fill="#fff"
-                animate={{ rotate: [0, 360] }}
-                transition={{ repeat: Infinity, duration: 6, ease: "linear" }}
-              />
-            </svg>
-          </motion.div>
-
-          {/* pulsing heart */}
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0.9 }}
-            animate={{ scale: [1, 1.08, 1], opacity: [0.95, 1, 0.95] }}
-            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-            className="flex flex-col items-center"
-          >
-            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm">
-              <Heart size={24} className="text-rose-400" />
-            </div>
-            <span className="text-xs text-gray-500 mt-2">Made with Loops of Love</span>
-          </motion.div>
-        </div>
-
-        <div className="text-center">
-          <h3 className="text-xl font-bold text-earthy-brown">{message}</h3>
-          <div className="mt-3 flex items-center justify-center gap-2 h-6">
-            <motion.span
-              aria-hidden
-              className="w-2 h-2 bg-rose-400 rounded-full"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ repeat: Infinity, duration: 0.9, delay: 0 }}
-            />
-            <motion.span
-              aria-hidden
-              className="w-2 h-2 bg-rose-300 rounded-full"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ repeat: Infinity, duration: 0.9, delay: 0.15 }}
-            />
-            <motion.span
-              aria-hidden
-              className="w-2 h-2 bg-rose-200 rounded-full"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ repeat: Infinity, duration: 0.9, delay: 0.3 }}
-            />
-          </div>
-        </div>
-
-        <div className="text-xs text-gray-500 text-center max-w-xs">
-          <p>
-            We&apos;re loading handmade goodness — small animations to keep you
-            company while we prepare the coziest bits for you. Thank you for
-            your patience! 🧶
-          </p>
-        </div>
-      </div>
+      {/* Soft Progress Bar */}
+      {/* <div className="absolute bottom-12 w-48 h-1 bg-stone-100 rounded-full overflow-hidden">
+        <motion.div
+          className="h-full bg-[#f4c2c2]"
+          initial={{ width: "0%" }}
+          animate={{ width: "100%" }}
+          transition={{ duration: 4, ease: "easeInOut" }}
+        />
+      </div> */}
     </div>
   );
-};
-
-export default LoadingScreen;
+}

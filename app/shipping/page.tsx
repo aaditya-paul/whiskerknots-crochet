@@ -17,21 +17,21 @@ function ShippingPolicy() {
       icon: <Truck size={28} />,
       title: "Standard Shipping",
       time: "5-7 Business Days",
-      price: "$5.99",
+      price: "₹60",
       description: "Perfect for most orders. Reliable and affordable.",
     },
     {
       icon: <Package size={28} />,
       title: "Express Shipping",
       time: "2-3 Business Days",
-      price: "$12.99",
+      price: "₹120",
       description: "Need it faster? We've got you covered!",
     },
     {
       icon: <Heart size={28} />,
       title: "Free Shipping",
       time: "5-7 Business Days",
-      price: "Free on orders over $75",
+      price: "Free on orders over ₹500",
       description: "Treat yourself to more handmade goodness!",
     },
   ];
@@ -45,7 +45,7 @@ function ShippingPolicy() {
     {
       question: "Do you ship internationally?",
       answer:
-        "Currently, we ship within the United States only. We're working on expanding internationally - stay tuned!",
+        "Currently, we ship within the India only. We're working on expanding internationally - stay tuned!",
     },
     {
       question: "How can I track my order?",
