@@ -1,6 +1,13 @@
 "use client";
 import React from "react";
-import { RotateCcw, Package, CheckCircle, XCircle, Mail, Heart } from "lucide-react";
+import {
+  RotateCcw,
+  Package,
+  CheckCircle,
+  XCircle,
+  Mail,
+  Heart,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { fadeInUp, staggerContainer } from "../../utils/animations";
 
@@ -235,9 +242,9 @@ function ReturnsPolicy() {
             Want to Exchange Instead?
           </h3>
           <p className="text-gray-600 text-lg text-center mb-6 leading-relaxed">
-            We're happy to exchange items for a different size or color
-            (subject to availability). Just mention "exchange" in your return
-            request and tell us what you'd prefer!
+            We're happy to exchange items for a different size or color (subject
+            to availability). Just mention "exchange" in your return request and
+            tell us what you'd prefer!
           </p>
           <div className="bg-warm-peach/20 rounded-2xl p-6 text-center">
             <p className="text-gray-700">
@@ -286,8 +293,8 @@ function ReturnsPolicy() {
                 •
               </span>
               <span>
-                <strong>Restocking Fee:</strong> No restocking fees! We just
-                ask that items be returned in their original condition.
+                <strong>Restocking Fee:</strong> No restocking fees! We just ask
+                that items be returned in their original condition.
               </span>
             </p>
             <p className="flex items-start gap-3">

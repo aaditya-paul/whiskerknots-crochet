@@ -1,6 +1,13 @@
 "use client";
 import React from "react";
-import { Package, Truck, Clock, MapPin, Heart, CheckCircle } from "lucide-react";
+import {
+  Package,
+  Truck,
+  Clock,
+  MapPin,
+  Heart,
+  CheckCircle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { fadeInUp, staggerContainer } from "../../utils/animations";
 

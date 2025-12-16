@@ -1,6 +1,13 @@
 "use client";
 import React from "react";
-import { Droplets, Wind, Sun, Heart, Sparkles, AlertCircle } from "lucide-react";
+import {
+  Droplets,
+  Wind,
+  Sun,
+  Heart,
+  Sparkles,
+  AlertCircle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { fadeInUp, staggerContainer } from "../../utils/animations";
 
@@ -167,7 +174,9 @@ function CareInstructions() {
               <h3 className="text-2xl font-bold text-earthy-brown mb-3">
                 {step.title}
               </h3>
-              <p className="text-gray-600 leading-relaxed">{step.description}</p>
+              <p className="text-gray-600 leading-relaxed">
+                {step.description}
+              </p>
             </motion.div>
           ))}
         </motion.div>
