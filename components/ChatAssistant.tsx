@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Sparkles } from "lucide-react";
 import { GenerateContentResponse } from "@google/genai";
