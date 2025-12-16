@@ -28,7 +28,7 @@ function Home() {
               Handmade with <br />
               <span className="text-rose-400">Loops of Love</span>
             </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-lg mx-auto md:mx-0 leading-relaxed">
+            <p className="text-xl  text-gray-600 mb-8 max-w-lg mx-auto md:mx-0 leading-relaxed">
               Discover our collection of cozy amigurumi, warm wearables, and
               charming decor. Each stitch creates a story.
             </p>

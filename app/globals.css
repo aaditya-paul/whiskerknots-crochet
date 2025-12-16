@@ -17,8 +17,12 @@
   --color-earthy-brown: #8d6e63;
   --color-leaf-green: #a5d6a7;
   --color-sunny-yellow: #fff59d;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --warm-charcoal: #2f2e33;
+  --dusty-rose: #e7c6d8;
+
+  /* brand fonts */
+  --font-sans: var(--font-quicksand);
+  --font-serif: var(--font-comfortaa);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -33,5 +37,18 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom selection color */
+::selection {
+  background: var(--dusty-rose);
+  color: var(--warm-charcoal);
 }

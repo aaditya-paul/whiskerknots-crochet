@@ -1,6 +1,7 @@
 import React from "react";
 import { Plus, Heart } from "lucide-react";
 import { Product } from "../types/types";
+import Image from "next/image";
 
 interface ProductCardProps {
   product: Product;
@@ -8,9 +9,13 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
-    <div className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-full relative">
+    <div className="group cursor-pointer bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-full relative">
       <div className="relative overflow-hidden aspect-square bg-gray-100">
-        <img
+        <Image
+          width={500}
+          height={500}
+          loading="lazy"
+          quality={80}
           src={product.image}
           alt={product.name}
           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
@@ -35,9 +40,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {product.description}
         </p>
 
-        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
+        <div className="flex font-sans items-center justify-between mt-auto pt-4 border-t border-gray-50">
           <span className="text-xl font-bold text-earthy-brown">
-            ${product.price.toFixed(2)}
+            ₹{product.price.toFixed(2)}
           </span>
           <button className="bg-orange-100 text-orange-800 hover:bg-orange-200 p-2 rounded-xl transition-colors flex items-center gap-2 px-4 font-bold text-sm">
             <Plus size={16} />

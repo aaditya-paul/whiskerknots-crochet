@@ -12,11 +12,20 @@ const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Brand Info */}
-          <div className="col-span-1 md:col-span-1">
-            <h3 className="text-xl font-bold text-earthy-brown mb-4 flex items-center gap-2">
-              <Heart size={18} className="text-rose-500" fill="currentColor" />
-              Whiskerknots
-            </h3>
+          <div className="col-span-1 md:col-span-1 space-y-4">
+            <div className="flex items-center gap-3 ">
+              <div className="bg-rose-400 text-white p-2 rounded-full transform group-hover:rotate-12 transition-transform duration-300">
+                <Heart size={20} fill="currentColor" />
+              </div>
+              <div className="flex flex-col items-start">
+                <span className="text-2xl font-bold text-earthy-brown tracking-tight">
+                  Whiskerknots
+                </span>
+                <span className="text-xs text-rose-400 font-medium tracking-widest uppercase">
+                  Loops of Love
+                </span>
+              </div>
+            </div>
             <p className="text-gray-600 mb-6 leading-relaxed">
               Handmade crochet goods crafted with patience, passion, and loops
               of love. Bringing coziness to your world, one stitch at a time.
@@ -144,6 +153,11 @@ const Footer: React.FC = () => {
           <p>
             &copy; {new Date().getFullYear()} Whiskerknots Crochet. All rights
             reserved.
+          </p>
+          <p className="mt-2 font-bold font-sans">
+            Made with lots of{" "}
+            <Heart size={14} className="inline-block text-rose-400" /> and yarn
+            🧶
           </p>
         </div>
       </div>
