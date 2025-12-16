@@ -1,5 +1,7 @@
 # Whiskerknots Crochet
 
+https://whiskerknots-crochet.vercel.app/
+
 A small Next.js e-commerce / brochure site for Whiskerknots — a handmade crochet shop specializing in amigurumi, wearables, and home decor. This repository is a modern rewrite using Next.js App Router, Tailwind CSS, and a server-side AI chat assistant.
 
 **Status:** Development
