@@ -66,7 +66,7 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <button
-                  onClick={() => router.push("/shop")}
+                  onClick={() => router.push("/shop?category=amigurumi")}
                   className="hover:text-rose-500 transition-colors cursor-pointer"
                 >
                   Amigurumi
@@ -74,7 +74,7 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <button
-                  onClick={() => router.push("/shop")}
+                  onClick={() => router.push("/shop?category=wearables")}
                   className="hover:text-rose-500 transition-colors cursor-pointer"
                 >
                   Wearables
@@ -82,7 +82,7 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <button
-                  onClick={() => router.push("/shop")}
+                  onClick={() => router.push("/shop?category=decor")}
                   className="hover:text-rose-500 transition-colors cursor-pointer"
                 >
                   Home Decor

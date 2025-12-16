@@ -3,14 +3,17 @@ import React, { useState } from "react";
 import { PRODUCTS } from "../../constants/constants";
 import ProductCard from "../../components/ProductCard";
 import { Product } from "../../types/types";
+import { useRouter, useSearchParams } from "next/navigation";
+import capitaliseFirstLetter from "@/utils/capitaliseFirstLetter";
 
 const Shop: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>("All");
-
-  const categories = ["All", "Amigurumi", "Wearables", "Decor"];
+  const router = useRouter();
+  const categoryFromQuery = useSearchParams().get("category") || "all";
+  const categories = ["all", "amigurumi", "wearables", "decor"];
 
   const filteredProducts =
-    activeCategory === "All"
+    activeCategory === "all"
       ? PRODUCTS
       : PRODUCTS.filter((p) => p.category === activeCategory);
 
@@ -36,7 +39,7 @@ const Shop: React.FC = () => {
                 : "bg-white text-gray-600 hover:bg-rose-50 border border-gray-100"
             }`}
           >
-            {cat}
+            {capitaliseFirstLetter(cat)}
           </button>
         ))}
       </div>
