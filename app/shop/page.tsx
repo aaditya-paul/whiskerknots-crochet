@@ -7,9 +7,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import capitaliseFirstLetter from "@/utils/capitaliseFirstLetter";
 
 const Shop: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState<string>("All");
+  // const [activeCategory, setActiveCategory] = useState<string>("All");
   const router = useRouter();
-  const categoryFromQuery = useSearchParams().get("category") || "all";
+  const activeCategory = useSearchParams().get("category") || "all";
   const categories = ["all", "amigurumi", "wearables", "decor"];
 
   const filteredProducts =
@@ -32,7 +32,9 @@ const Shop: React.FC = () => {
         {categories.map((cat) => (
           <button
             key={cat}
-            onClick={() => setActiveCategory(cat)}
+            onClick={() =>
+              router.push(cat === "all" ? "/shop" : `/shop?category=${cat}`)
+            }
             className={`px-6 py-2 rounded-full font-medium transition-all ${
               activeCategory === cat
                 ? "bg-rose-400 text-white shadow-md transform scale-105"
