@@ -79,19 +79,5 @@ A small Next.js e-commerce / brochure site for Whiskerknots — a handmade croch
 **Troubleshooting**
 
 - If you see "API key is missing" in the client, ensure you restarted the dev server after creating `.env.local` and that requests go to `/api/chat` (the client no longer reads `process.env.GEMINI_API_KEY`).
-- If Tailwind color utilities don't apply, ensure the CSS variables in `app/globals.css` use the `--color-` prefix (this repo already configures them as `--color-cozy-cream`, etc.).
-
-**Next steps / Ideas**
-
-- Add product data and product pages (static or server-side fetched)
-- Add cart persistence and checkout integration
-- Add unit / integration tests
-
----
-
-If you'd like, I can also:
-
-- Create example product fixtures and a sample product page
-- Add a `.env.example` file and a simple deployment guide
-
-Enjoy! 🧶
+- If Tailwind color utilities don't apply, ensure the CSS variables in `app/globals.css` use the `--color-` prefix (this repo already configures them as
+  🧶
