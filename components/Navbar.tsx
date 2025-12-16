@@ -22,7 +22,7 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="bg-soft-rose text-white p-2 rounded-full transform group-hover:rotate-12 transition-transform duration-300">
+            <div className="bg-rose-400 text-white p-2 rounded-full transform group-hover:rotate-12 transition-transform duration-300">
               <Heart size={20} fill="currentColor" />
             </div>
             <div className="flex flex-col items-start">
