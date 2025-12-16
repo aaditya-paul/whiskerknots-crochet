@@ -111,7 +111,7 @@ const ChatAssistant: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         className={` ${
           isOpen ? "hidden" : "block"
-        } fixed bottom-6 right-6 w-16 h-16 bg-rose-400 text-white rounded-full shadow-lg hover:bg-rose-500 transition-colors flex items-center justify-center z-50`}
+        } fixed bottom-6 right-6 w-16 h-16 bg-rose-400 text-white rounded-full shadow-lg hover:bg-rose-500 transition-colors flex items-center justify-center z-[50]`}
         animate={{
           scale: [1, 1.1, 1],
         }}
@@ -132,8 +132,10 @@ const ChatAssistant: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="fixed bottom-6 right-6 w-[360px] h-[600px] bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col"
+            className="fixed bottom-6 right-6 w-[360px] h-[600px] bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col z-[50]"
           >
+            {/* Backdrop to ensure assistant stays above other elements (transparent) */}
+            <div className="absolute inset-0 -z-10" />
             {/* Header */}
             <div className="bg-gradient-to-r from-rose-400 to-warm-peach p-4 flex justify-between items-center text-white">
               <div className="flex items-center gap-2">
