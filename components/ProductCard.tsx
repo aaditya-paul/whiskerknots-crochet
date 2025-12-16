@@ -67,20 +67,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           alt={product.name}
           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
         />
-        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+
+        {/* CHANGED SECTION: Always visible on mobile, hover on desktop */}
+        <div className="absolute top-3 right-3 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleToggleFavorite}
-            className={`p-2 rounded-full shadow-md transition-colors ${
+            className={`p-2.5 rounded-full shadow-md transition-colors ${
               isFavorite
                 ? "bg-rose-400 text-white"
-                : "bg-white text-gray-400 hover:text-rose-500"
+                : "bg-white/90 backdrop-blur-sm text-gray-400 hover:text-rose-500"
             }`}
           >
             <Heart size={20} fill={isFavorite ? "currentColor" : "none"} />
           </motion.button>
         </div>
+
         <div className="absolute bottom-0 left-0 bg-white/90 backdrop-blur px-4 py-1 rounded-tr-xl">
           <span className="text-xs font-bold text-earthy-brown uppercase tracking-wider">
             {product.category}

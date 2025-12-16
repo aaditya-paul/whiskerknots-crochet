@@ -442,7 +442,7 @@ function CheckoutPage() {
               >
                 {isProcessing
                   ? "Processing..."
-                  : `Place Order • $${total.toFixed(2)}`}
+                  : `Place Order • ₹${total.toFixed(2)}`}
               </motion.button>
             </form>
           </motion.div>
@@ -480,11 +480,11 @@ function CheckoutPage() {
                         {item.name}
                       </p>
                       <p className="text-sm text-gray-500">
-                        ${item.price.toFixed(2)} each
+                        ₹{item.price.toFixed(2)} each
                       </p>
                     </div>
                     <div className="text-sm font-bold text-gray-800">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      ₹{(item.price * item.quantity).toFixed(2)}
                     </div>
                   </div>
                 ))}
@@ -494,7 +494,7 @@ function CheckoutPage() {
               <div className="space-y-3 pt-4 border-t border-gray-200">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span className="font-bold">${subtotal.toFixed(2)}</span>
+                  <span className="font-bold">₹{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
@@ -502,17 +502,17 @@ function CheckoutPage() {
                     {shipping === 0 ? (
                       <span className="text-leaf-green">Free! 🎉</span>
                     ) : (
-                      `$${shipping.toFixed(2)}`
+                      `₹${shipping.toFixed(2)}`
                     )}
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Tax</span>
-                  <span className="font-bold">${tax.toFixed(2)}</span>
+                  <span className="font-bold">₹{tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-2xl font-bold text-earthy-brown pt-3 border-t border-gray-200">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
               </div>
 
