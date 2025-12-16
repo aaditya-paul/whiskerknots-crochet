@@ -4,14 +4,28 @@ import { Plus, Heart } from "lucide-react";
 import { Product } from "../types/types";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const router = useRouter();
+
+  const handleCardClick = () => {
+    router.push(`/shop/${product.slug}`);
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // In real app, this would dispatch to cart
+    alert(`Added ${product.name} to cart!`);
+  };
+
   return (
     <motion.div
+      onClick={handleCardClick}
       whileHover={{ y: -8, transition: { duration: 0.3 } }}
       className="group cursor-pointer bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-full relative"
     >
@@ -53,6 +67,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             ₹{product.price.toFixed(2)}
           </motion.span>
           <motion.button
+            onClick={handleAddToCart}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="bg-orange-100 text-orange-800 hover:bg-orange-200 p-2 rounded-xl transition-colors flex items-center gap-2 px-4 font-bold text-sm"

@@ -10,6 +10,7 @@ export const PRODUCTS: Product[] = [
     description:
       "A soft, squishy companion ready for cuddles. Made with velvet yarn.",
     isFeatured: true,
+    slug: "mochi-the-chubby-cat",
   },
   {
     id: "2",
@@ -20,6 +21,7 @@ export const PRODUCTS: Product[] = [
     description:
       "Carry a little sunshine everywhere you go. Durable cotton blend.",
     isFeatured: true,
+    slug: "sunflower-tote-bag",
   },
   {
     id: "3",
@@ -28,6 +30,7 @@ export const PRODUCTS: Product[] = [
     category: "wearables",
     image: "https://picsum.photos/id/1025/400/400",
     description: "Keep your ears warm with this classic, chunky beanie.",
+    slug: "cozy-cable-knit-beanie",
   },
   {
     id: "4",
@@ -37,6 +40,7 @@ export const PRODUCTS: Product[] = [
     image: "https://picsum.photos/id/1003/400/400",
     description: "The perfect nap time buddy for woodland adventures.",
     isFeatured: true,
+    slug: "sleepy-fox-plush",
   },
   {
     id: "5",
@@ -46,6 +50,7 @@ export const PRODUCTS: Product[] = [
     image: "https://picsum.photos/id/1056/400/400",
     description:
       "Add some greenery to your room with this macrame-style crochet hanger.",
+    slug: "boho-hanging-planter",
   },
   {
     id: "6",
@@ -54,6 +59,7 @@ export const PRODUCTS: Product[] = [
     category: "decor",
     image: "https://picsum.photos/id/1020/400/400",
     description: "A labor of love. Perfect for chilly evenings on the couch.",
+    slug: "pastel-granny-square-blanket",
   },
 ];
 

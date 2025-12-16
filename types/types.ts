@@ -13,6 +13,7 @@ export interface Product {
   image: string;
   description: string;
   isFeatured?: boolean;
+  slug: string;
 }
 
 export interface ChatMessage {
