@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -13,17 +13,26 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/AuthContext";
 import { fadeInUp, staggerContainer } from "../../utils/animations";
 
 function CheckoutPage() {
   const router = useRouter();
   const { items, getCartTotal, clearCart } = useCart();
+  const { user, loading } = useAuth();
+
+  // Redirect to login if user is not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login?redirect=/checkout");
+    }
+  }, [user, loading, router]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
 
   const [formData, setFormData] = useState({
     // Contact Info
-    email: "",
+    email: user?.email || "",
     // Shipping Info
     firstName: "",
     lastName: "",
@@ -39,6 +48,13 @@ function CheckoutPage() {
     expiryDate: "",
     cvv: "",
   });
+
+  // Pre-fill email when user is available
+  useEffect(() => {
+    if (user?.email) {
+      setFormData((prev) => ({ ...prev, email: user.email || "" }));
+    }
+  }, [user]);
 
   const subtotal = getCartTotal();
   const shipping = subtotal > 75 ? 0 : 5.99;
@@ -65,6 +81,20 @@ function CheckoutPage() {
     // Scroll to top to show success message
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-cozy-cream flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-rose-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Don't render checkout if user is not authenticated
+  if (!user) {
+    return null;
+  }
 
   if (items.length === 0 && !orderComplete) {
     return (

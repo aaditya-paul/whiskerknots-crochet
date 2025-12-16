@@ -5,8 +5,10 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ChatAssistant from "@/components/ChatAssistant";
 import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
 import CartDrawer from "@/components/CartDrawer";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
+import FavoritesSyncProvider from "@/components/FavoritesSyncProvider";
 
 const quicksand = Quicksand({
   variable: "--font-quicksand",
@@ -72,16 +74,19 @@ export default function RootLayout({
       <body
         className={` ${quicksand.variable} ${comfortaa.variable}  antialiased`}
       >
-        <CartProvider>
-          <div className="font-serif">
-            <Navbar />
-            {children}
-            <Footer />
-            <ChatAssistant />
-            <CartDrawer />
-            <FavoritesDrawer />
-          </div>
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <div className="font-serif">
+              <FavoritesSyncProvider />
+              <Navbar />
+              {children}
+              <Footer />
+              <ChatAssistant />
+              <CartDrawer />
+              <FavoritesDrawer />
+            </div>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

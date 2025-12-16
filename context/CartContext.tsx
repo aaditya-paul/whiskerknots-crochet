@@ -6,7 +6,10 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
 import { Product } from "../types/types";
+import { useAuth } from "./AuthContext";
 
 export interface CartItem extends Product {
   quantity: number;
@@ -30,6 +33,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  const { user } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -51,12 +55,93 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, []);
 
-  // Save cart to localStorage whenever it changes
+  // Sync cart and favorites with Firebase when user signs in
+  useEffect(() => {
+    const syncWithFirebase = async () => {
+      if (!user || !isHydrated) return;
+
+      try {
+        // Get local cart and favorites
+        const localCart = JSON.parse(
+          localStorage.getItem("whiskerknots-cart") || "[]"
+        );
+        const localFavorites = JSON.parse(
+          localStorage.getItem("favorites") || "[]"
+        );
+
+        // Get Firebase data
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const firebaseCart = userData.cart || [];
+          const firebaseFavorites = userData.favorites || [];
+
+          // Merge local and firebase data (local takes precedence for cart)
+          const mergedCart = [...localCart];
+          firebaseCart.forEach((fbItem: CartItem) => {
+            const exists = mergedCart.find((item) => item.id === fbItem.id);
+            if (!exists) {
+              mergedCart.push(fbItem);
+            }
+          });
+
+          // Merge favorites (remove duplicates)
+          const mergedFavorites = [
+            ...new Set([...localFavorites, ...firebaseFavorites]),
+          ];
+
+          // Update state and localStorage
+          setItems(mergedCart);
+          localStorage.setItem("whiskerknots-cart", JSON.stringify(mergedCart));
+          localStorage.setItem("favorites", JSON.stringify(mergedFavorites));
+
+          // Sync to Firebase
+          await setDoc(
+            userDocRef,
+            {
+              cart: mergedCart,
+              favorites: mergedFavorites,
+            },
+            { merge: true }
+          );
+
+          // Trigger favorites update event
+          window.dispatchEvent(new Event("favoritesChanged"));
+        } else {
+          // First time user, save local data to Firebase
+          await setDoc(
+            userDocRef,
+            {
+              cart: localCart,
+              favorites: localFavorites,
+            },
+            { merge: true }
+          );
+        }
+      } catch (error) {
+        console.error("Failed to sync with Firebase:", error);
+      }
+    };
+
+    syncWithFirebase();
+  }, [user, isHydrated]);
+
+  // Save cart to localStorage and Firebase whenever it changes
   useEffect(() => {
     if (isHydrated) {
       localStorage.setItem("whiskerknots-cart", JSON.stringify(items));
+
+      // Sync to Firebase if user is logged in
+      if (user) {
+        const userDocRef = doc(db, "users", user.uid);
+        setDoc(userDocRef, { cart: items }, { merge: true }).catch((error) => {
+          console.error("Failed to sync cart to Firebase:", error);
+        });
+      }
     }
-  }, [items, isHydrated]);
+  }, [items, isHydrated, user]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
     setItems((prevItems) => {
