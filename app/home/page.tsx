@@ -8,7 +8,14 @@ import ProductCard from "../../components/ProductCard";
 import type { Product, Testimonial } from "../../types/types";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { fadeInUp, fadeIn, slideInLeft, slideInRight, staggerContainer, floatAnimation } from "../../utils/animations";
+import {
+  fadeInUp,
+  fadeIn,
+  slideInLeft,
+  slideInRight,
+  staggerContainer,
+  floatAnimation,
+} from "../../utils/animations";
 
 function Home() {
   const featuredProducts = PRODUCTS.filter((p) => p.isFeatured).slice(0, 3);
@@ -18,25 +25,30 @@ function Home() {
     <div className="space-y-20">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-warm-peach/20 rounded-[3rem] mt-4 mx-4">
-        <motion.div 
+        <motion.div
           animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.6, 0.5] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-yellow-200 rounded-full blur-3xl opacity-50 pointer-events-none"
         ></motion.div>
-        <motion.div 
+        <motion.div
           animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.6, 0.5] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1,
+          }}
           className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-rose-200 rounded-full blur-3xl opacity-50 pointer-events-none"
         ></motion.div>
 
         <div className="max-w-7xl mx-auto px-4 py-24 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row items-center gap-12">
-          <motion.div 
+          <motion.div
             initial="hidden"
             animate="visible"
             variants={slideInLeft}
             className="flex-1 text-center md:text-left"
           >
-            <motion.span 
+            <motion.span
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -44,7 +56,7 @@ function Home() {
             >
               New Collection Available ✨
             </motion.span>
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
@@ -53,7 +65,7 @@ function Home() {
               Handmade with <br />
               <span className="text-rose-400">Loops of Love</span>
             </motion.h1>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
@@ -62,7 +74,7 @@ function Home() {
               Discover our collection of cozy amigurumi, warm wearables, and
               charming decor. Each stitch creates a story.
             </motion.p>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
@@ -84,17 +96,14 @@ function Home() {
               </button>
             </motion.div>
           </motion.div>
-          <motion.div 
+          <motion.div
             initial="hidden"
             animate="visible"
             variants={slideInRight}
             className="flex-1 relative"
           >
             <div className="relative z-10 grid grid-cols-2 gap-4">
-              <motion.div
-                animate={floatAnimation}
-                transition={{ delay: 0 }}
-              >
+              <motion.div animate={floatAnimation} transition={{ delay: 0 }}>
                 <Image
                   src="https://picsum.photos/id/1025/300/400"
                   alt="Crochet Item"
@@ -103,10 +112,7 @@ function Home() {
                   className="rounded-3xl shadow-lg transform translate-y-8"
                 />
               </motion.div>
-              <motion.div
-                animate={floatAnimation}
-                transition={{ delay: 0.5 }}
-              >
+              <motion.div animate={floatAnimation} transition={{ delay: 0.5 }}>
                 <Image
                   src="https://picsum.photos/id/1074/300/400"
                   alt="Crochet Item"
@@ -121,14 +127,14 @@ function Home() {
       </section>
 
       {/* Featured Products */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
         variants={fadeIn}
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       >
-        <motion.div 
+        <motion.div
           variants={fadeInUp}
           className="flex justify-between items-end mb-10"
         >
@@ -146,7 +152,7 @@ function Home() {
           </button>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
@@ -164,10 +170,7 @@ function Home() {
           ))}
         </motion.div>
 
-        <motion.div 
-          variants={fadeIn}
-          className="mt-8 text-center md:hidden"
-        >
+        <motion.div variants={fadeIn} className="mt-8 text-center md:hidden">
           <button
             onClick={() => router.push("/shop")}
             className="inline-flex items-center gap-2 text-rose-500 font-bold"
@@ -178,7 +181,7 @@ function Home() {
       </motion.section>
 
       {/* Testimonials */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -186,10 +189,7 @@ function Home() {
         className="bg-sunny-yellow/30 py-20 rounded-[3rem] mx-4"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            variants={fadeInUp}
-            className="text-center mb-16"
-          >
+          <motion.div variants={fadeInUp} className="text-center mb-16">
             <h2 className="text-3xl font-bold text-earthy-brown mb-4">
               Happy Customers
             </h2>
@@ -202,7 +202,7 @@ function Home() {
             </div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             variants={staggerContainer}
             className="grid grid-cols-1 md:grid-cols-3 gap-8"
           >

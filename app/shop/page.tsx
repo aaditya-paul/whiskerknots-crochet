@@ -20,13 +20,13 @@ const Shop: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="text-center mb-12"
       >
-        <motion.h1 
+        <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -34,7 +34,7 @@ const Shop: React.FC = () => {
         >
           The Shop
         </motion.h1>
-        <motion.p 
+        <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -46,7 +46,7 @@ const Shop: React.FC = () => {
       </motion.div>
 
       {/* Categories */}
-      <motion.div 
+      <motion.div
         initial="hidden"
         animate="visible"
         variants={staggerContainer}
@@ -74,7 +74,7 @@ const Shop: React.FC = () => {
 
       {/* Grid */}
       {filteredProducts.length > 0 ? (
-        <motion.div 
+        <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
@@ -91,7 +91,7 @@ const Shop: React.FC = () => {
           ))}
         </motion.div>
       ) : (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}

@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 const Footer: React.FC = () => {
   const router = useRouter();
   return (
-    <motion.footer 
+    <motion.footer
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}

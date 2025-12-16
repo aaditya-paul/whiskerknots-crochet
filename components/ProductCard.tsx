@@ -11,7 +11,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
-    <motion.div 
+    <motion.div
       whileHover={{ y: -8, transition: { duration: 0.3 } }}
       className="group cursor-pointer bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-full relative"
     >
@@ -38,9 +38,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       </div>
 
       <div className="p-6 flex flex-col flex-grow">
-        <motion.h3 
-          className="text-lg font-bold text-gray-800 mb-2 group-hover:text-rose-500 transition-colors"
-        >
+        <motion.h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-rose-500 transition-colors">
           {product.name}
         </motion.h3>
         <p className="text-gray-500 text-sm mb-4 line-clamp-2 flex-grow">
@@ -48,13 +46,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </p>
 
         <div className="flex font-sans items-center justify-between mt-auto pt-4 border-t border-gray-50">
-          <motion.span 
+          <motion.span
             className="text-xl font-bold text-earthy-brown"
             whileHover={{ scale: 1.05 }}
           >
             ₹{product.price.toFixed(2)}
           </motion.span>
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="bg-orange-100 text-orange-800 hover:bg-orange-200 p-2 rounded-xl transition-colors flex items-center gap-2 px-4 font-bold text-sm"

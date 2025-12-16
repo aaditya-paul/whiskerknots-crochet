@@ -5,16 +5,16 @@ export const fadeInUp = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6 }
-  }
+    transition: { duration: 0.6 },
+  },
 };
 
 export const fadeIn = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { duration: 0.5 }
-  }
+    transition: { duration: 0.5 },
+  },
 };
 
 export const scaleIn = {
@@ -22,8 +22,8 @@ export const scaleIn = {
   visible: {
     opacity: 1,
     scale: 1,
-    transition: { duration: 0.5 }
-  }
+    transition: { duration: 0.5 },
+  },
 };
 
 export const slideInLeft = {
@@ -31,8 +31,8 @@ export const slideInLeft = {
   visible: {
     opacity: 1,
     x: 0,
-    transition: { duration: 0.6 }
-  }
+    transition: { duration: 0.6 },
+  },
 };
 
 export const slideInRight = {
@@ -40,8 +40,8 @@ export const slideInRight = {
   visible: {
     opacity: 1,
     x: 0,
-    transition: { duration: 0.6 }
-  }
+    transition: { duration: 0.6 },
+  },
 };
 
 export const staggerContainer = {
@@ -50,15 +50,15 @@ export const staggerContainer = {
     opacity: 1,
     transition: {
       staggerChildren: 0.1,
-      delayChildren: 0.1
-    }
-  }
+      delayChildren: 0.1,
+    },
+  },
 };
 
 export const floatAnimation = {
   y: [0, -10, 0],
   transition: {
     duration: 3,
-    repeat: Infinity
-  }
+    repeat: Infinity,
+  },
 };

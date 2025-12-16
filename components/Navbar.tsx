@@ -18,7 +18,7 @@ const Navbar: React.FC = () => {
   ];
 
   return (
-    <motion.nav 
+    <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
@@ -28,7 +28,7 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <motion.div 
+            <motion.div
               whileHover={{ rotate: 12 }}
               transition={{ duration: 0.3 }}
               className="bg-rose-400 text-white p-2 rounded-full"
@@ -63,10 +63,10 @@ const Navbar: React.FC = () => {
                   }`}
                 >
                   {link.label}
-              </Link>
+                </Link>
               </motion.div>
             ))}
-            <motion.button 
+            <motion.button
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: navLinks.length * 0.1 }}

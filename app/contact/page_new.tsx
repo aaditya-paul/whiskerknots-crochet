@@ -16,7 +16,7 @@ function Page() {
   if (submitted) {
     return (
       <div className="max-w-xl mx-auto px-4 py-24 text-center">
-        <motion.div 
+        <motion.div
           initial="hidden"
           animate="visible"
           variants={scaleIn}
@@ -51,7 +51,7 @@ function Page() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -59,7 +59,7 @@ function Page() {
           >
             Let&apos;s Chat!
           </motion.h1>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
@@ -69,19 +69,19 @@ function Page() {
             will be back in stock? Or just want to say hi? Drop us a line!
           </motion.p>
 
-          <motion.div 
+          <motion.div
             initial="hidden"
             animate="visible"
             variants={{
               hidden: { opacity: 0 },
               visible: {
                 opacity: 1,
-                transition: { staggerChildren: 0.15, delayChildren: 0.4 }
-              }
+                transition: { staggerChildren: 0.15, delayChildren: 0.4 },
+              },
             }}
             className="space-y-6"
           >
-            <motion.div 
+            <motion.div
               variants={fadeInUp}
               whileHover={{ x: 5, transition: { duration: 0.2 } }}
               className="flex items-start gap-4"
@@ -95,7 +95,7 @@ function Page() {
               </div>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               variants={fadeInUp}
               whileHover={{ x: 5, transition: { duration: 0.2 } }}
               className="flex items-start gap-4"
@@ -114,7 +114,7 @@ function Page() {
             </motion.div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
@@ -127,7 +127,7 @@ function Page() {
           </motion.div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
