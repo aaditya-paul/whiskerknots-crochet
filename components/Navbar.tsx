@@ -12,11 +12,29 @@ const Navbar: React.FC = () => {
   const pathname = usePathname();
   const { openCart, getCartCount } = useCart();
   const [cartCount, setCartCount] = useState(0);
+  const [favoriteCount, setFavoriteCount] = useState(0);
 
   // Update cart count after mount to avoid hydration mismatch
   React.useEffect(() => {
     setCartCount(getCartCount());
   }, [getCartCount]);
+
+  // Update favorite count
+  React.useEffect(() => {
+    const updateFavoriteCount = () => {
+      const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+      setFavoriteCount(favorites.length);
+    };
+
+    updateFavoriteCount();
+
+    window.addEventListener("favoritesChanged", updateFavoriteCount);
+    return () => window.removeEventListener("favoritesChanged", updateFavoriteCount);
+  }, []);
+
+  const handleOpenFavorites = () => {
+    window.dispatchEvent(new Event("openFavorites"));
+  };
 
   const navLinks = [
     { label: "Home", href: "/" },
@@ -75,6 +93,26 @@ const Navbar: React.FC = () => {
               </motion.div>
             ))}
             <motion.button
+              onClick={handleOpenFavorites}
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: navLinks.length * 0.1 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-rose-100 text-rose-500 p-3 rounded-full hover:bg-rose-200 transition-colors duration-300 relative"
+            >
+              <Heart size={18} fill="currentColor" />
+              {favoriteCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-2 -right-2 bg-rose-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
+                >
+                  {favoriteCount}
+                </motion.span>
+              )}
+            </motion.button>
+            <motion.button
               onClick={openCart}
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -127,9 +165,29 @@ const Navbar: React.FC = () => {
                 {link.label}
               </Link>
             ))}
-            <button className="bg-earthy-brown text-white w-full py-3 rounded-xl flex justify-center items-center gap-2 mt-4">
+            <button
+              onClick={handleOpenFavorites}
+              className="bg-rose-100 text-rose-500 w-full py-3 rounded-xl flex justify-center items-center gap-2 mt-4 font-bold relative"
+            >
+              <Heart size={20} fill="currentColor" />
+              <span>Favorites</span>
+              {favoriteCount > 0 && (
+                <span className="absolute right-4 bg-rose-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                  {favoriteCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={openCart}
+              className="bg-earthy-brown text-white w-full py-3 rounded-xl flex justify-center items-center gap-2 relative font-bold"
+            >
               <ShoppingBag size={20} />
               <span>View Cart</span>
+              {cartCount > 0 && (
+                <span className="absolute right-4 bg-rose-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
             </button>
           </div>
         </div>

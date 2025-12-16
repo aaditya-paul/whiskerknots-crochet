@@ -30,6 +30,15 @@ function ProductPage() {
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [showFavoriteToast, setShowFavoriteToast] = useState(false);
+
+  // Load favorite status from localStorage
+  React.useEffect(() => {
+    if (product) {
+      const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+      setIsFavorite(favorites.includes(product.id));
+    }
+  }, [product]);
 
   if (!product) {
     return (
@@ -63,6 +72,33 @@ function ProductPage() {
     }
   };
 
+  const handleToggleFavorite = () => {
+    if (!product) return;
+
+    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    const newFavoriteState = !isFavorite;
+
+    if (newFavoriteState) {
+      // Add to favorites
+      if (!favorites.includes(product.id)) {
+        favorites.push(product.id);
+      }
+    } else {
+      // Remove from favorites
+      const index = favorites.indexOf(product.id);
+      if (index > -1) {
+        favorites.splice(index, 1);
+      }
+    }
+
+    localStorage.setItem("favorites", JSON.stringify(favorites));
+    setIsFavorite(newFavoriteState);
+
+    // Show toast notification
+    setShowFavoriteToast(true);
+    setTimeout(() => setShowFavoriteToast(false), 2000);
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       await navigator.share({
@@ -78,6 +114,26 @@ function ProductPage() {
 
   return (
     <div className="min-h-screen bg-cozy-cream">
+      {/* Favorite Toast Notification */}
+      {showFavoriteToast && (
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -50 }}
+          className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 bg-white shadow-2xl rounded-2xl px-6 py-4 border-2 border-rose-400"
+        >
+          <div className="flex items-center gap-3">
+            <Heart
+              size={20}
+              className={`${isFavorite ? "text-rose-400 fill-rose-400" : "text-gray-400"}`}
+            />
+            <span className="font-bold text-earthy-brown">
+              {isFavorite ? "Added to favorites! 💕" : "Removed from favorites"}
+            </span>
+          </div>
+        </motion.div>
+      )}
+
       {/* Back Button */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <motion.button
@@ -118,7 +174,7 @@ function ProductPage() {
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setIsFavorite(!isFavorite)}
+                onClick={handleToggleFavorite}
                 className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition-colors ${
                   isFavorite
                     ? "bg-rose-400 text-white"

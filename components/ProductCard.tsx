@@ -14,6 +14,12 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const { addToCart } = useCart();
+  const [isFavorite, setIsFavorite] = React.useState(false);
+
+  React.useEffect(() => {
+    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    setIsFavorite(favorites.includes(product.id));
+  }, [product.id]);
 
   const handleCardClick = () => {
     router.push(`/shop/${product.slug}`);
@@ -22,6 +28,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     addToCart(product, 1);
+  };
+
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    const newFavoriteState = !isFavorite;
+
+    if (newFavoriteState) {
+      if (!favorites.includes(product.id)) {
+        favorites.push(product.id);
+      }
+    } else {
+      const index = favorites.indexOf(product.id);
+      if (index > -1) {
+        favorites.splice(index, 1);
+      }
+    }
+
+    localStorage.setItem("favorites", JSON.stringify(favorites));
+    setIsFavorite(newFavoriteState);
+    window.dispatchEvent(new Event("favoritesChanged"));
   };
 
   return (
@@ -41,9 +68,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
         />
         <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <button className="bg-white p-2 rounded-full shadow-md text-gray-400 hover:text-red-500 transition-colors">
-            <Heart size={20} />
-          </button>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleToggleFavorite}
+            className={`p-2 rounded-full shadow-md transition-colors ${
+              isFavorite
+                ? "bg-rose-400 text-white"
+                : "bg-white text-gray-400 hover:text-rose-500"
+            }`}
+          >
+            <Heart size={20} fill={isFavorite ? "currentColor" : "none"} />
+          </motion.button>
         </div>
         <div className="absolute bottom-0 left-0 bg-white/90 backdrop-blur px-4 py-1 rounded-tr-xl">
           <span className="text-xs font-bold text-earthy-brown uppercase tracking-wider">
