@@ -125,7 +125,9 @@ function ProductPage() {
           <div className="flex items-center gap-3">
             <Heart
               size={20}
-              className={`${isFavorite ? "text-rose-400 fill-rose-400" : "text-gray-400"}`}
+              className={`${
+                isFavorite ? "text-rose-400 fill-rose-400" : "text-gray-400"
+              }`}
             />
             <span className="font-bold text-earthy-brown">
               {isFavorite ? "Added to favorites! 💕" : "Removed from favorites"}

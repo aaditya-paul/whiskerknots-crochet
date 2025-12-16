@@ -44,7 +44,9 @@ const FavoritesDrawer: React.FC = () => {
 
   const handleRemoveFavorite = (productId: string) => {
     const favoriteIds = JSON.parse(localStorage.getItem("favorites") || "[]");
-    const updatedFavorites = favoriteIds.filter((id: string) => id !== productId);
+    const updatedFavorites = favoriteIds.filter(
+      (id: string) => id !== productId
+    );
     localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
     setFavorites(favorites.filter((product) => product.id !== productId));
     window.dispatchEvent(new Event("favoritesChanged"));

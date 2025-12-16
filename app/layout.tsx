@@ -20,8 +20,18 @@ const comfortaa = Comfortaa({
 
 export const metadata: Metadata = {
   title: "Whiskerknots - Handmade Crochet Creations | Loops of Love",
-  description: "Discover unique handmade crochet items crafted with love. From adorable amigurumi to cozy wearables and charming home decor. Each piece is a one-of-a-kind creation made with premium yarns.",
-  keywords: ["crochet", "handmade", "amigurumi", "yarn crafts", "handcrafted gifts", "crochet plushies", "custom crochet", "artisan crafts"],
+  description:
+    "Discover unique handmade crochet items crafted with love. From adorable amigurumi to cozy wearables and charming home decor. Each piece is a one-of-a-kind creation made with premium yarns.",
+  keywords: [
+    "crochet",
+    "handmade",
+    "amigurumi",
+    "yarn crafts",
+    "handcrafted gifts",
+    "crochet plushies",
+    "custom crochet",
+    "artisan crafts",
+  ],
   authors: [{ name: "Whiskerknots" }],
   creator: "Whiskerknots",
   publisher: "Whiskerknots",
@@ -30,7 +40,8 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://whiskerknotscrochet.com",
     title: "Whiskerknots - Handmade Crochet Creations",
-    description: "Unique handmade crochet items crafted with love. Amigurumi, wearables, and home decor.",
+    description:
+      "Unique handmade crochet items crafted with love. Amigurumi, wearables, and home decor.",
     siteName: "Whiskerknots",
   },
   twitter: {

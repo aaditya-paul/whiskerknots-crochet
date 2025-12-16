@@ -29,7 +29,8 @@ const Navbar: React.FC = () => {
     updateFavoriteCount();
 
     window.addEventListener("favoritesChanged", updateFavoriteCount);
-    return () => window.removeEventListener("favoritesChanged", updateFavoriteCount);
+    return () =>
+      window.removeEventListener("favoritesChanged", updateFavoriteCount);
   }, []);
 
   const handleOpenFavorites = () => {
