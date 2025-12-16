@@ -38,7 +38,7 @@ function Page() {
           >
             Send another message
           </button>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -190,7 +190,7 @@ function Page() {
               Send Message
             </button>
           </form>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

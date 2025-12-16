@@ -1,13 +1,14 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import { PRODUCTS } from "../../constants/constants";
 import ProductCard from "../../components/ProductCard";
 import { Product } from "../../types/types";
 import { useRouter, useSearchParams } from "next/navigation";
 import capitaliseFirstLetter from "@/utils/capitaliseFirstLetter";
+import { motion } from "framer-motion";
+import { fadeInUp, staggerContainer } from "../../utils/animations";
 
 const Shop: React.FC = () => {
-  // const [activeCategory, setActiveCategory] = useState<string>("All");
   const router = useRouter();
   const activeCategory = useSearchParams().get("category") || "all";
   const categories = ["all", "amigurumi", "wearables", "decor"];
@@ -19,19 +20,44 @@ const Shop: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-earthy-brown mb-4">The Shop</h1>
-        <p className="text-gray-500 max-w-2xl mx-auto">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center mb-12"
+      >
+        <motion.h1 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="text-4xl font-bold text-earthy-brown mb-4"
+        >
+          The Shop
+        </motion.h1>
+        <motion.p 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="text-gray-500 max-w-2xl mx-auto"
+        >
           Browse our handmade collection. Every item is unique and made with
           care.
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
 
       {/* Categories */}
-      <div className="flex flex-wrap justify-center gap-4 mb-12">
+      <motion.div 
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+        className="flex flex-wrap justify-center gap-4 mb-12"
+      >
         {categories.map((cat) => (
-          <button
+          <motion.button
             key={cat}
+            variants={fadeInUp}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() =>
               router.push(cat === "all" ? "/shop" : `/shop?category=${cat}`)
             }
@@ -42,21 +68,37 @@ const Shop: React.FC = () => {
             }`}
           >
             {capitaliseFirstLetter(cat)}
-          </button>
+          </motion.button>
         ))}
-      </div>
+      </motion.div>
 
       {/* Grid */}
       {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProducts.map((product: Product) => (
-            <ProductCard key={product.id} product={product} />
+        <motion.div 
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+        >
+          {filteredProducts.map((product: Product, index) => (
+            <motion.div
+              key={product.id}
+              variants={fadeInUp}
+              transition={{ delay: index * 0.05 }}
+            >
+              <ProductCard product={product} />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       ) : (
-        <div className="text-center py-20 text-gray-400">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-center py-20 text-gray-400"
+        >
           <p>No cozy items found in this category yet!</p>
-        </div>
+        </motion.div>
       )}
     </div>
   );

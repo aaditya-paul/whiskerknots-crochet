@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Sparkles } from "lucide-react";
+import { X, Send, Sparkles, MessageCircle } from "lucide-react";
 import { ChatMessage } from "../types/types";
+import { motion, AnimatePresence } from "framer-motion";
 
 const ChatAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -102,115 +103,124 @@ const ChatAssistant: React.FC = () => {
   };
 
   return (
-    <>
-      {/* Floating Action Button */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 z-40 bg-rose-400 text-white p-4 rounded-full shadow-lg hover:bg-rose-500 hover:scale-110 transition-all duration-300 ${
-          isOpen ? "hidden" : "flex"
-        }`}
-        aria-label="Open Chat"
+    <div>
+      {/* Floating Chat Button */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed bottom-6 right-6 w-16 h-16 bg-rose-400 text-white rounded-full shadow-lg hover:bg-rose-500 transition-colors flex items-center justify-center z-50"
+        animate={{
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          repeatType: "loop",
+        }}
       >
-        <MessageCircle size={28} />
-        <span className="absolute -top-1 -right-1 flex h-4 w-4">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-4 w-4 bg-sky-500"></span>
-        </span>
-      </button>
+        {isOpen ? <X size={28} /> : <MessageCircle size={28} />}
+      </motion.button>
 
-      {/* Chat Window */}
-      <div
-        className={`fixed z-50 bottom-6 right-6 w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-rose-100 overflow-hidden transform transition-all duration-300 origin-bottom-right flex flex-col ${
-          isOpen
-            ? "scale-100 opacity-100"
-            : "scale-0 opacity-0 pointer-events-none"
-        }`}
-        style={{ height: "500px", maxHeight: "80vh" }}
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-rose-400 to-warm-peach p-4 flex justify-between items-center text-white">
-          <div className="flex items-center gap-2">
-            <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
-              <Sparkles size={18} />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg  leading-tight">KnitWit</h3>
-              <p className="text-xs text-white/90 font-medium">
-                Yarn Assistant
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="p-1 hover:bg-white/20 rounded-full transition-colors"
+      {/* Chat Modal */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="fixed bottom-6 right-6 w-[360px] h-[600px] bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col"
           >
-            <X size={24} />
-          </button>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex w-full ${
-                msg.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
-              <div
-                className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                  msg.role === "user"
-                    ? "bg-rose-400 text-white rounded-tr-none"
-                    : "bg-white text-gray-700 rounded-tl-none border border-gray-100"
-                }`}
+            {/* Header */}
+            <div className="bg-gradient-to-r from-rose-400 to-warm-peach p-4 flex justify-between items-center text-white">
+              <div className="flex items-center gap-2">
+                <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg  leading-tight">KnitWit</h3>
+                  <p className="text-xs text-white/90 font-medium">
+                    Yarn Assistant
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 hover:bg-white/20 rounded-full transition-colors"
               >
-                {msg.text}
-              </div>
+                <X size={24} />
+              </button>
             </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm flex items-center gap-1">
-                <span
-                  className="w-2 h-2 bg-rose-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "0ms" }}
-                ></span>
-                <span
-                  className="w-2 h-2 bg-rose-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "150ms" }}
-                ></span>
-                <span
-                  className="w-2 h-2 bg-rose-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "300ms" }}
-                ></span>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
 
-        {/* Input */}
-        <form
-          onSubmit={handleSend}
-          className="p-4 bg-white border-t border-gray-100 flex gap-2"
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about yarn..."
-            className="flex-1 px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-200 transition-all text-sm"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="p-2 bg-rose-400 text-white rounded-xl hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Send size={20} />
-          </button>
-        </form>
-      </div>
-    </>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              {messages.map((msg, index) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  className={`flex w-full ${
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                      msg.role === "user"
+                        ? "bg-rose-400 text-white rounded-tr-none"
+                        : "bg-white text-gray-700 rounded-tl-none border border-gray-100"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </motion.div>
+              ))}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm flex items-center gap-1">
+                    <span
+                      className="w-2 h-2 bg-rose-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    ></span>
+                    <span
+                      className="w-2 h-2 bg-rose-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    ></span>
+                    <span
+                      className="w-2 h-2 bg-rose-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    ></span>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <form
+              onSubmit={handleSend}
+              className="p-4 bg-white border-t border-gray-100 flex gap-2"
+            >
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask about yarn..."
+                className="flex-1 px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-200 transition-all text-sm"
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                className="p-2 bg-rose-400 text-white rounded-xl hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Send size={20} />
+              </button>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 

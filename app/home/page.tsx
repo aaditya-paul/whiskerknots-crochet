@@ -7,6 +7,8 @@ import { PRODUCTS, TESTIMONIALS } from "../../constants/constants";
 import ProductCard from "../../components/ProductCard";
 import type { Product, Testimonial } from "../../types/types";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { fadeInUp, fadeIn, slideInLeft, slideInRight, staggerContainer, floatAnimation } from "../../utils/animations";
 
 function Home() {
   const featuredProducts = PRODUCTS.filter((p) => p.isFeatured).slice(0, 3);
@@ -16,23 +18,56 @@ function Home() {
     <div className="space-y-20">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-warm-peach/20 rounded-[3rem] mt-4 mx-4">
-        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-yellow-200 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-rose-200 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+        <motion.div 
+          animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.6, 0.5] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-yellow-200 rounded-full blur-3xl opacity-50 pointer-events-none"
+        ></motion.div>
+        <motion.div 
+          animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.6, 0.5] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-rose-200 rounded-full blur-3xl opacity-50 pointer-events-none"
+        ></motion.div>
 
         <div className="max-w-7xl mx-auto px-4 py-24 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row items-center gap-12">
-          <div className="flex-1 text-center md:text-left">
-            <span className="inline-block py-1 px-3 rounded-full bg-white text-rose-500 text-sm font-bold mb-6 shadow-sm border border-rose-100">
+          <motion.div 
+            initial="hidden"
+            animate="visible"
+            variants={slideInLeft}
+            className="flex-1 text-center md:text-left"
+          >
+            <motion.span 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="inline-block py-1 px-3 rounded-full bg-white text-rose-500 text-sm font-bold mb-6 shadow-sm border border-rose-100"
+            >
               New Collection Available ✨
-            </span>
-            <h1 className="text-5xl md:text-7xl font-bold text-earthy-brown mb-6 leading-tight">
+            </motion.span>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="text-5xl md:text-7xl font-bold text-earthy-brown mb-6 leading-tight"
+            >
               Handmade with <br />
               <span className="text-rose-400">Loops of Love</span>
-            </h1>
-            <p className="text-xl  text-gray-600 mb-8 max-w-lg mx-auto md:mx-0 leading-relaxed">
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="text-xl  text-gray-600 mb-8 max-w-lg mx-auto md:mx-0 leading-relaxed"
+            >
               Discover our collection of cozy amigurumi, warm wearables, and
               charming decor. Each stitch creates a story.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+            </motion.p>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start"
+            >
               <button
                 onClick={() => {
                   router.push("/shop");
@@ -47,32 +82,56 @@ function Home() {
               >
                 Our Story
               </button>
-            </div>
-          </div>
-          <div className="flex-1 relative">
+            </motion.div>
+          </motion.div>
+          <motion.div 
+            initial="hidden"
+            animate="visible"
+            variants={slideInRight}
+            className="flex-1 relative"
+          >
             <div className="relative z-10 grid grid-cols-2 gap-4">
-              <Image
-                src="https://picsum.photos/id/1025/300/400"
-                alt="Crochet Item"
-                width={300}
-                height={400}
-                className="rounded-3xl shadow-lg transform translate-y-8"
-              />
-              <Image
-                src="https://picsum.photos/id/1074/300/400"
-                alt="Crochet Item"
-                width={300}
-                height={400}
-                className="rounded-3xl shadow-lg transform -translate-y-8"
-              />
+              <motion.div
+                animate={floatAnimation}
+                transition={{ delay: 0 }}
+              >
+                <Image
+                  src="https://picsum.photos/id/1025/300/400"
+                  alt="Crochet Item"
+                  width={300}
+                  height={400}
+                  className="rounded-3xl shadow-lg transform translate-y-8"
+                />
+              </motion.div>
+              <motion.div
+                animate={floatAnimation}
+                transition={{ delay: 0.5 }}
+              >
+                <Image
+                  src="https://picsum.photos/id/1074/300/400"
+                  alt="Crochet Item"
+                  width={300}
+                  height={400}
+                  className="rounded-3xl shadow-lg transform -translate-y-8"
+                />
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Featured Products */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-end mb-10">
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={fadeIn}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+      >
+        <motion.div 
+          variants={fadeInUp}
+          className="flex justify-between items-end mb-10"
+        >
           <div>
             <h2 className="text-3xl font-bold text-earthy-brown mb-2">
               Favorites
@@ -85,28 +144,52 @@ function Home() {
           >
             View All <ArrowRight size={20} />
           </button>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {featuredProducts.map((product: Product) => (
-            <ProductCard key={product.id} product={product} />
+        <motion.div 
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+        >
+          {featuredProducts.map((product: Product, index) => (
+            <motion.div
+              key={product.id}
+              variants={fadeInUp}
+              transition={{ delay: index * 0.1 }}
+            >
+              <ProductCard product={product} />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
-        <div className="mt-8 text-center md:hidden">
+        <motion.div 
+          variants={fadeIn}
+          className="mt-8 text-center md:hidden"
+        >
           <button
             onClick={() => router.push("/shop")}
             className="inline-flex items-center gap-2 text-rose-500 font-bold"
           >
             View All <ArrowRight size={20} />
           </button>
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
 
       {/* Testimonials */}
-      <section className="bg-sunny-yellow/30 py-20 rounded-[3rem] mx-4">
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={fadeIn}
+        className="bg-sunny-yellow/30 py-20 rounded-[3rem] mx-4"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <motion.div 
+            variants={fadeInUp}
+            className="text-center mb-16"
+          >
             <h2 className="text-3xl font-bold text-earthy-brown mb-4">
               Happy Customers
             </h2>
@@ -117,23 +200,28 @@ function Home() {
               <Star fill="currentColor" size={24} />
               <Star fill="currentColor" size={24} />
             </div>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <motion.div 
+            variants={staggerContainer}
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          >
             {TESTIMONIALS.map((t: Testimonial) => (
-              <div
+              <motion.div
                 key={t.id}
+                variants={fadeInUp}
+                whileHover={{ y: -5, transition: { duration: 0.3 } }}
                 className="bg-white p-8 rounded-3xl shadow-sm border border-yellow-100 flex flex-col items-center text-center"
               >
                 <p className="text-gray-600 italic mb-6">
                   &quot;{t.text}&quot;
                 </p>
                 <h4 className="font-bold text-earthy-brown">{t.name}</h4>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }

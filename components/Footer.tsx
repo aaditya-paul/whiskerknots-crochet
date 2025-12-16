@@ -2,13 +2,19 @@
 
 import React from "react";
 import { Instagram, Facebook, Twitter, Heart } from "lucide-react";
-import { Page } from "../types/types";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 const Footer: React.FC = () => {
   const router = useRouter();
   return (
-    <footer className="bg-orange-50 pt-16 pb-8 border-t border-orange-100 mt-auto">
+    <motion.footer 
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+      className="bg-orange-50 pt-16 pb-8 border-t border-orange-100 mt-auto"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Brand Info */}
@@ -31,24 +37,30 @@ const Footer: React.FC = () => {
               of love. Bringing coziness to your world, one stitch at a time.
             </p>
             <div className="flex space-x-4">
-              <a
+              <motion.a
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                whileTap={{ scale: 0.95 }}
                 href="https://www.instagram.com/whiskerknotscrochet"
                 className="bg-white p-2 rounded-full shadow-sm text-rose-400 hover:text-rose-600 hover:shadow-md transition-all"
               >
                 <Instagram size={20} />
-              </a>
-              <a
+              </motion.a>
+              <motion.a
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                whileTap={{ scale: 0.95 }}
                 href="#"
                 className="bg-white p-2 rounded-full shadow-sm text-blue-400 hover:text-blue-600 hover:shadow-md transition-all"
               >
                 <Facebook size={20} />
-              </a>
-              <a
+              </motion.a>
+              <motion.a
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                whileTap={{ scale: 0.95 }}
                 href="#"
                 className="bg-white p-2 rounded-full shadow-sm text-sky-400 hover:text-sky-600 hover:shadow-md transition-all"
               >
                 <Twitter size={20} />
-              </a>
+              </motion.a>
             </div>
           </div>
 
@@ -161,7 +173,7 @@ const Footer: React.FC = () => {
           </p>
         </div>
       </div>
-    </footer>
+    </motion.footer>
   );
 };
 
