@@ -2,10 +2,10 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-export const alt = "Whiskerknots - Handmade Crochet Creations";
+export const alt = "Whiskerknots Logo";
 export const size = {
-  width: 1200,
-  height: 630,
+  width: 600,
+  height: 600,
 };
 
 export const contentType = "image/png";
@@ -21,12 +21,23 @@ export default async function OgImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#fffdf7",
-          backgroundImage:
-            "radial-gradient(circle at 25px 25px, #faa499 2%, transparent 0%), radial-gradient(circle at 75px 75px, #f97986 2%, transparent 0%)",
-          backgroundSize: "100px 100px",
+          backgroundColor: "#fffdf7", // --cozy-cream
         }}
       >
+        {/* Soft Background Blobs */}
+        <div
+          style={{
+            position: "absolute",
+            width: "400px",
+            height: "400px",
+            borderRadius: "100%",
+            background: "#ffdab9", // --warm-peach
+            opacity: 0.2,
+            filter: "blur(50px)",
+          }}
+        />
+
+        {/* Main Logo Container */}
         <div
           style={{
             display: "flex",
@@ -34,50 +45,53 @@ export default async function OgImage() {
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: "white",
-            borderRadius: "48px",
-            padding: "80px",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            width: "450px",
+            height: "450px",
+            borderRadius: "120px", // Heavily rounded per design guide
+            boxShadow: "0 20px 40px rgba(141, 110, 99, 0.15)",
+            border: "8px solid #f4c2c2", // --soft-rose
+            position: "relative",
           }}
         >
+          {/* Icon Section */}
           <div
             style={{
-              fontSize: 120,
-              marginBottom: 20,
+              fontSize: 160,
+              display: "flex",
+              marginBottom: -10,
             }}
           >
             🧶
           </div>
+
+          {/* Text Section */}
           <div
             style={{
-              fontSize: 80,
+              fontSize: 54,
               fontWeight: "bold",
-              background: "linear-gradient(to right, #8b5a3c, #f97986)",
-              backgroundClip: "text",
-              color: "transparent",
-              marginBottom: 20,
+              color: "#8d6e63", // --earthy-brown
+              fontFamily: "sans-serif", // Comfortaa placeholder
+              marginTop: 10,
             }}
           >
             Whiskerknots
           </div>
+
+          {/* Subtext Badge */}
           <div
             style={{
-              fontSize: 36,
-              color: "#6b7280",
-              fontStyle: "italic",
+              marginTop: 15,
+              padding: "8px 24px",
+              backgroundColor: "#f4c2c2", // --soft-rose
+              borderRadius: "100px",
+              color: "white",
+              fontSize: 20,
+              fontWeight: "bold",
+              letterSpacing: "2px",
+              textTransform: "uppercase",
             }}
           >
-            Loops of Love ❤️
-          </div>
-          <div
-            style={{
-              fontSize: 28,
-              color: "#9ca3af",
-              marginTop: 30,
-              textAlign: "center",
-              maxWidth: "700px",
-            }}
-          >
-            Handmade Crochet Creations • Amigurumi • Wearables • Home Decor
+            Loops of Love
           </div>
         </div>
       </div>
