@@ -2,9 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Sparkles } from "lucide-react";
-import { GenerateContentResponse } from "@google/genai";
 import { ChatMessage } from "../types/types";
-import { sendMessageStream } from "../services/geminiService";
 
 const ChatAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,10 +42,6 @@ const ChatAssistant: React.FC = () => {
     setIsLoading(true);
 
     try {
-      if (!process.env.API_KEY) {
-        throw new Error("Missing API Key");
-      }
-
       // Create a placeholder for the stream
       const botMessageId = (Date.now() + 1).toString();
       setMessages((prev) => [
@@ -60,20 +54,36 @@ const ChatAssistant: React.FC = () => {
         },
       ]);
 
-      const streamResult = await sendMessageStream(userMessage.text);
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: userMessage.text }),
+      });
 
+      if (!response.ok) {
+        throw new Error("Failed to get response");
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
       let fullText = "";
 
-      for await (const chunk of streamResult) {
-        const c = chunk as GenerateContentResponse;
-        const chunkText = c.text || "";
-        fullText += chunkText;
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === botMessageId ? { ...msg, text: fullText } : msg
-          )
-        );
+          const chunkText = decoder.decode(value, { stream: true });
+          fullText += chunkText;
+
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === botMessageId ? { ...msg, text: fullText } : msg
+            )
+          );
+        }
       }
     } catch (error) {
       console.error(error);
@@ -118,13 +128,13 @@ const ChatAssistant: React.FC = () => {
         style={{ height: "500px", maxHeight: "80vh" }}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-rose-300 to-warm-peach p-4 flex justify-between items-center text-white">
+        <div className="bg-gradient-to-r from-rose-400 to-warm-peach p-4 flex justify-between items-center text-white">
           <div className="flex items-center gap-2">
             <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
               <Sparkles size={18} />
             </div>
             <div>
-              <h3 className="font-bold text-lg leading-tight">KnitWit</h3>
+              <h3 className="font-bold text-lg  leading-tight">KnitWit</h3>
               <p className="text-xs text-white/90 font-medium">
                 Yarn Assistant
               </p>

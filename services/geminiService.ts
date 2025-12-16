@@ -21,14 +21,14 @@ Keep responses concise (under 100 words) and helpful.
 `;
 
 export const getGeminiChat = (): Chat => {
-  if (!process.env.API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     throw new Error("API Key is missing");
   }
 
   if (!chatSession) {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     chatSession = ai.chats.create({
-      model: 'gemini-2.5-flash',
+      model: "gemini-2.5-flash",
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
       },
@@ -38,6 +38,6 @@ export const getGeminiChat = (): Chat => {
 };
 
 export const sendMessageStream = async (message: string) => {
-    const chat = getGeminiChat();
-    return await chat.sendMessageStream({ message });
+  const chat = getGeminiChat();
+  return await chat.sendMessageStream({ message });
 };
