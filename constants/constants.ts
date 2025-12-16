@@ -83,3 +83,7 @@ export const TESTIMONIALS: Testimonial[] = [
     rating: 5,
   },
 ];
+
+export const SHIPPING_COST_THRESHOLD = 200; // Free shipping for orders over ₹75
+export const SHIPPING_COST = 60; // Standard shipping cost ₹10
+export const EXPRESS_SHIPPING_COST = 120; // Express shipping cost ₹20

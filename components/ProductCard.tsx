@@ -5,6 +5,7 @@ import { Product } from "../types/types";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useCart } from "../context/CartContext";
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +13,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
+  const { addToCart } = useCart();
 
   const handleCardClick = () => {
     router.push(`/shop/${product.slug}`);
@@ -19,8 +21,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // In real app, this would dispatch to cart
-    alert(`Added ${product.name} to cart!`);
+    addToCart(product, 1);
   };
 
   return (

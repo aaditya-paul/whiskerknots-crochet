@@ -18,11 +18,13 @@ import { motion } from "framer-motion";
 import { PRODUCTS, TESTIMONIALS } from "../../../constants/constants";
 import ProductCard from "../../../components/ProductCard";
 import { fadeInUp, staggerContainer } from "../../../utils/animations";
+import { useCart } from "../../../context/CartContext";
 
 function ProductPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
+  const { addToCart } = useCart();
 
   const product = PRODUCTS.find((p) => p.slug === slug);
   const [quantity, setQuantity] = useState(1);
@@ -56,8 +58,9 @@ function ProductPage() {
   ).slice(0, 3);
 
   const handleAddToCart = () => {
-    // In real app, this would dispatch to cart state/context
-    alert(`Added ${quantity} x ${product.name} to cart!`);
+    if (product) {
+      addToCart(product, quantity);
+    }
   };
 
   const handleShare = async () => {
@@ -181,7 +184,7 @@ function ProductPage() {
                 <span className="text-gray-600 ml-2">(24 reviews)</span>
               </div>
               <p className="text-3xl font-bold text-rose-400">
-                ${product.price.toFixed(2)}
+                ₹{product.price.toFixed(2)}
               </p>
             </div>
 

@@ -4,6 +4,8 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ChatAssistant from "@/components/ChatAssistant";
+import { CartProvider } from "@/context/CartContext";
+import CartDrawer from "@/components/CartDrawer";
 
 const quicksand = Quicksand({
   variable: "--font-quicksand",
@@ -30,13 +32,15 @@ export default function RootLayout({
       <body
         className={` ${quicksand.variable} ${comfortaa.variable}  antialiased`}
       >
-        <div className="font-serif">
-          <Navbar />
-
-          {children}
-          <Footer />
-          <ChatAssistant />
-        </div>
+        <CartProvider>
+          <div className="font-serif">
+            <Navbar />
+            {children}
+            <Footer />
+            <ChatAssistant />
+            <CartDrawer />
+          </div>
+        </CartProvider>
       </body>
     </html>
   );
