@@ -1,67 +1,4 @@
-import { Product, Testimonial } from "../types/types";
-
-export const PRODUCTS: Product[] = [
-  {
-    id: "1",
-    name: "Mochi the Chubby Cat",
-    price: 35.0,
-    category: "amigurumi",
-    image: "https://picsum.photos/id/1074/400/400",
-    description:
-      "A soft, squishy companion ready for cuddles. Made with velvet yarn.",
-    isFeatured: true,
-    slug: "mochi-the-chubby-cat",
-  },
-  {
-    id: "2",
-    name: "Sunflower Tote Bag",
-    price: 45.0,
-    category: "wearables",
-    image: "https://picsum.photos/id/1082/400/400",
-    description:
-      "Carry a little sunshine everywhere you go. Durable cotton blend.",
-    isFeatured: true,
-    slug: "sunflower-tote-bag",
-  },
-  {
-    id: "3",
-    name: "Cozy Cable Knit Beanie",
-    price: 28.0,
-    category: "wearables",
-    image: "https://picsum.photos/id/1025/400/400",
-    description: "Keep your ears warm with this classic, chunky beanie.",
-    slug: "cozy-cable-knit-beanie",
-  },
-  {
-    id: "4",
-    name: "Sleepy Fox Plush",
-    price: 42.0,
-    category: "amigurumi",
-    image: "https://picsum.photos/id/1003/400/400",
-    description: "The perfect nap time buddy for woodland adventures.",
-    isFeatured: true,
-    slug: "sleepy-fox-plush",
-  },
-  {
-    id: "5",
-    name: "Boho Hanging Planter",
-    price: 22.0,
-    category: "decor",
-    image: "https://picsum.photos/id/1056/400/400",
-    description:
-      "Add some greenery to your room with this macrame-style crochet hanger.",
-    slug: "boho-hanging-planter",
-  },
-  {
-    id: "6",
-    name: "Pastel Granny Square Blanket",
-    price: 120.0,
-    category: "decor",
-    image: "https://picsum.photos/id/1020/400/400",
-    description: "A labor of love. Perfect for chilly evenings on the couch.",
-    slug: "pastel-granny-square-blanket",
-  },
-];
+import { Testimonial } from "../types/types";
 
 export const TESTIMONIALS: Testimonial[] = [
   {
@@ -84,6 +21,6 @@ export const TESTIMONIALS: Testimonial[] = [
   },
 ];
 
-export const SHIPPING_COST_THRESHOLD = 200; // Free shipping for orders over ₹75
-export const SHIPPING_COST = 60; // Standard shipping cost ₹10
-export const EXPRESS_SHIPPING_COST = 120; // Express shipping cost ₹20
+export const SHIPPING_COST_THRESHOLD = 200;
+export const SHIPPING_COST = 60;
+export const EXPRESS_SHIPPING_COST = 120;

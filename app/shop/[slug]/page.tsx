@@ -20,19 +20,25 @@ import ProductCard from "../../../components/ProductCard";
 import { fadeInUp, staggerContainer } from "../../../utils/animations";
 import { useCart } from "../../../context/CartContext";
 import { useProducts } from "../../../hooks/useProducts";
+import {
+  DEFAULT_PRODUCT_IMAGE_URL,
+  getProductGalleryImages,
+  isUnoptimizedImageUrl,
+} from "../../../utils/productImages";
 
 function ProductPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
   const { addToCart } = useCart();
-  const { products, loading } = useProducts();
+  const { products, loading, error } = useProducts();
 
   const product = products.find((p) => p.slug === slug);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showFavoriteToast, setShowFavoriteToast] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   // Load favorite status from localStorage
   React.useEffect(() => {
@@ -51,6 +57,25 @@ function ProductPage() {
   }
 
   if (!product) {
+    if (error) {
+      return (
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="max-w-lg rounded-3xl border border-red-200 bg-red-50 p-8 text-center text-red-700">
+            <h1 className="text-2xl font-bold text-red-800 mb-3">
+              Couldn&apos;t load this product
+            </h1>
+            <p className="text-sm text-red-600 mb-6">{error}</p>
+            <button
+              onClick={() => router.push("/shop")}
+              className="px-6 py-3 bg-earthy-brown text-white rounded-2xl font-bold hover:bg-rose-400 transition-colors"
+            >
+              Back to Shop
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -69,11 +94,16 @@ function ProductPage() {
   }
 
   // Mock additional images (in real app, products would have multiple images)
-  const productImages = [product.image, product.image, product.image];
+  // Use real images from the product, falling back to thumbnail
+  const productImages = getProductGalleryImages(product);
+  const selectedImageSrc =
+    productImages[selectedImage] && !failedImages[productImages[selectedImage]]
+      ? productImages[selectedImage]
+      : DEFAULT_PRODUCT_IMAGE_URL;
 
   // Related products (same category, excluding current)
   const relatedProducts = products
-    .filter((p) => p.category === product.category && p.id !== product.id)
+    .filter((p) => p.categoryId === product.categoryId && p.id !== product.id)
     .slice(0, 3);
 
   const handleAddToCart = () => {
@@ -176,10 +206,17 @@ function ProductPage() {
             {/* Main Image */}
             <div className="relative aspect-square bg-white rounded-[3rem] overflow-hidden shadow-lg border border-gray-100">
               <Image
-                src={productImages[selectedImage]}
+                src={selectedImageSrc}
                 alt={product.name}
                 width={800}
                 height={800}
+                unoptimized={isUnoptimizedImageUrl(selectedImageSrc)}
+                onError={() =>
+                  setFailedImages((current) => ({
+                    ...current,
+                    [productImages[selectedImage]]: true,
+                  }))
+                }
                 className="w-full h-full object-cover"
                 priority
               />
@@ -199,7 +236,7 @@ function ProductPage() {
               {/* Category Badge */}
               <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur px-4 py-2 rounded-2xl shadow-md">
                 <span className="text-sm font-bold text-earthy-brown uppercase tracking-wider">
-                  {product.category}
+                  {product.category?.name ?? ""}
                 </span>
               </div>
             </div>
@@ -218,10 +255,17 @@ function ProductPage() {
                   }`}
                 >
                   <Image
-                    src={img}
+                    src={failedImages[img] ? DEFAULT_PRODUCT_IMAGE_URL : img}
                     alt={`${product.name} view ${index + 1}`}
                     width={80}
                     height={80}
+                    unoptimized={isUnoptimizedImageUrl(img)}
+                    onError={() =>
+                      setFailedImages((current) => ({
+                        ...current,
+                        [img]: true,
+                      }))
+                    }
                     className="w-full h-full object-cover"
                   />
                 </motion.button>

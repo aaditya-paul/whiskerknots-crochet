@@ -1,36 +1,36 @@
 "use client";
 import React, { useMemo } from "react";
 import ProductCard from "../../components/ProductCard";
-import { Product } from "../../types/types";
 import { useRouter, useSearchParams } from "next/navigation";
-import capitaliseFirstLetter from "@/utils/capitaliseFirstLetter";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeInUp, staggerContainer } from "../../utils/animations";
-import NotFound from "../not-found";
 import { useProducts } from "../../hooks/useProducts";
 
 const Shop: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { products } = useProducts();
+  const { products, categories: dbCategories, loading, error } = useProducts();
 
-  // 1. Extract the category from URL
   const activeCategory = searchParams.get("category") || "all";
-  const categories = ["all", "amigurumi", "wearables", "decor"];
 
-  // 2. Derived filtered products based on active category
-  const filteredProducts = useMemo<Product[]>(() => {
-    if (activeCategory === "all") {
-      return products;
-    }
-    return products.filter(
-      (p) => p.category.toLowerCase() === activeCategory.toLowerCase(),
-    );
+  // Build ["all", ...category slugs from DB]
+  const categorySlugs = useMemo(
+    () => ["all", ...dbCategories.map((c) => c.slug)],
+    [dbCategories],
+  );
+
+  // Filter products by active category slug
+  const filteredProducts = useMemo(() => {
+    if (activeCategory === "all") return products;
+    return products.filter((p) => p.category?.slug === activeCategory);
   }, [activeCategory, products]);
 
-  if (!categories.includes(activeCategory)) {
-    return <NotFound />;
-  }
+  // Display name for a category slug
+  const labelFor = (slug: string) => {
+    if (slug === "all") return "All";
+    return dbCategories.find((c) => c.slug === slug)?.name ?? slug;
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <motion.div
@@ -46,46 +46,58 @@ const Shop: React.FC = () => {
         </p>
       </motion.div>
 
-      {/* Categories */}
+      {/* Category filter pills */}
       <motion.div
         initial="hidden"
         animate="visible"
         variants={staggerContainer}
         className="flex flex-wrap justify-center gap-4 mb-12"
       >
-        {categories.map((cat) => (
+        {categorySlugs.map((slug) => (
           <motion.button
-            key={cat}
+            key={slug}
             variants={fadeInUp}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              // Using router.push updates the searchParams, which triggers our useEffect
-              router.push(cat === "all" ? "/shop" : `/shop?category=${cat}`);
-            }}
+            onClick={() =>
+              router.push(slug === "all" ? "/shop" : `/shop?category=${slug}`)
+            }
             className={`px-6 py-2 rounded-full font-medium transition-all ${
-              activeCategory === cat
-                ? "bg-rose-400 text-white shadow-md transform scale-105"
+              activeCategory === slug
+                ? "bg-rose-400 text-white shadow-md scale-105"
                 : "bg-white text-gray-600 hover:bg-rose-50 border border-gray-100"
             }`}
           >
-            {capitaliseFirstLetter(cat)}
+            {labelFor(slug)}
           </motion.button>
         ))}
       </motion.div>
 
-      {/* Grid with AnimatePresence for smooth transitions */}
+      {/* Product grid */}
       <div className="min-h-100">
-        {filteredProducts.length > 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <div className="w-10 h-10 border-4 border-rose-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : error ? (
           <motion.div
-            layout // Added layout prop for smooth grid reshuffling
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mx-auto max-w-xl rounded-3xl border border-red-200 bg-red-50 px-6 py-8 text-center text-red-700"
+          >
+            <p className="font-semibold">We couldn&apos;t load the products.</p>
+            <p className="mt-2 text-sm text-red-600">{error}</p>
+          </motion.div>
+        ) : filteredProducts.length > 0 ? (
+          <motion.div
+            layout
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
           >
             <AnimatePresence mode="popLayout">
-              {filteredProducts.map((product: Product) => (
+              {filteredProducts.map((product) => (
                 <motion.div
                   key={product.id}
                   layout

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "start:db": "npx supabase start",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

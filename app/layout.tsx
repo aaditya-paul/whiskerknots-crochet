@@ -9,6 +9,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import CartDrawer from "@/components/CartDrawer";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
 import FavoritesSyncProvider from "@/components/FavoritesSyncProvider";
+import { ProductsProvider } from "@/context/ProductsContext";
 
 const quicksand = Quicksand({
   variable: "--font-quicksand",
@@ -76,15 +77,17 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CartProvider>
-            <div className="font-serif">
-              <FavoritesSyncProvider />
-              <Navbar />
-              {children}
-              <Footer />
-              <ChatAssistant />
-              <CartDrawer />
-              <FavoritesDrawer />
-            </div>
+            <ProductsProvider>
+              <div className="font-serif">
+                <FavoritesSyncProvider />
+                <Navbar />
+                {children}
+                <Footer />
+                <ChatAssistant />
+                <CartDrawer />
+                <FavoritesDrawer />
+              </div>
+            </ProductsProvider>
           </CartProvider>
         </AuthProvider>
       </body>

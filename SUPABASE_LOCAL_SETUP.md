@@ -33,84 +33,64 @@ supabase status
 
 ## 3. Create required tables in local Supabase
 
-Open the SQL editor in Supabase Studio and run:
+Run migrations from this repo (recommended):
 
-```sql
-create table if not exists public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  email text not null,
-  display_name text,
-  photo_url text,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.user_state (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  cart jsonb not null default '[]'::jsonb,
-  favorites jsonb not null default '[]'::jsonb,
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists public.products (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  price numeric not null,
-  category text not null,
-  image text not null,
-  description text not null,
-  is_featured boolean not null default false,
-  slug text not null unique
-);
+```bash
+supabase db reset
 ```
+
+This applies:
+
+- `supabase/migrations/20260316000000_ecommerce_schema.sql`
+- `supabase/migrations/20260317010000_reset_conflicting_product_policies.sql`
+- `supabase/migrations/20260317013000_add_profiles_and_user_state.sql`
+
+If you do not want to reset the DB, run these SQL files manually in Supabase Studio SQL Editor in the same order.
 
 ## 4. Recommended local RLS policies
 
-```sql
-alter table public.profiles enable row level security;
-alter table public.user_state enable row level security;
-alter table public.products enable row level security;
+For this project, use the migration-defined policies only.
 
-create policy "profiles_select_own" on public.profiles
-for select using (auth.uid() = id);
+Do not add `products_write_admin` policies that query `auth.users` directly from RLS expressions. Those can cause:
 
-create policy "profiles_upsert_own" on public.profiles
-for all using (auth.uid() = id) with check (auth.uid() = id);
+`[42501] permission denied for table users`
 
-create policy "user_state_select_own" on public.user_state
-for select using (auth.uid() = user_id);
-
-create policy "user_state_upsert_own" on public.user_state
-for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
-create policy "products_read_public" on public.products
-for select using (true);
-
--- Restrict writes to admin users by email allowlist.
--- Replace emails below with your own admin users.
-create policy "products_write_admin" on public.products
-for all using (
-  exists (
-    select 1 from auth.users u
-    where u.id = auth.uid()
-      and lower(u.email) in ('admin@example.com')
-  )
-)
-with check (
-  exists (
-    select 1 from auth.users u
-    where u.id = auth.uid()
-      and lower(u.email) in ('admin@example.com')
-  )
-);
-```
+Admin access is enforced in the app via `NEXT_PUBLIC_ADMIN_EMAILS`, and DB write access for CMS tables is granted to authenticated users by migration policy.
 
 ## 5. Seed products
 
 1. Sign in with an admin email.
-2. Go to `/admin`.
-3. Click `Copy Default Catalog into CMS`.
+2. Go to `/admin/products/new`.
+3. Add categories and products through the CMS UI.
 
-## 6. Run app
+## 6. Troubleshooting
+
+### Error: `[42501] permission denied for table users` while adding a product
+
+Cause: old conflicting product policies still exist in your local DB.
+
+Fix quickly:
+
+```sql
+drop policy if exists products_write_admin on public.products;
+drop policy if exists products_read_public on public.products;
+
+drop policy if exists "Auth manage products" on public.products;
+create policy "Auth manage products" on public.products
+  for all using (auth.role() = 'authenticated');
+
+drop policy if exists "Public read active products" on public.products;
+create policy "Public read active products" on public.products
+  for select using (status = 'active');
+```
+
+Or run:
+
+```bash
+supabase db reset
+```
+
+## 7. Run app
 
 ```bash
 npm install

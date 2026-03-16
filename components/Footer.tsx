@@ -4,9 +4,13 @@ import React from "react";
 import { Instagram, Facebook, Twitter, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useProducts } from "@/hooks/useProducts";
 
 const Footer: React.FC = () => {
   const router = useRouter();
+  const { categories } = useProducts();
+
+  const featuredCategoryLinks = categories.slice(0, 3);
   return (
     <motion.footer
       initial={{ opacity: 0 }}
@@ -76,30 +80,18 @@ const Footer: React.FC = () => {
                   Shop All
                 </button>
               </li>
-              <li>
-                <button
-                  onClick={() => router.push("/shop?category=amigurumi")}
-                  className="hover:text-rose-500 transition-colors cursor-pointer"
-                >
-                  Amigurumi
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => router.push("/shop?category=wearables")}
-                  className="hover:text-rose-500 transition-colors cursor-pointer"
-                >
-                  Wearables
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => router.push("/shop?category=decor")}
-                  className="hover:text-rose-500 transition-colors cursor-pointer"
-                >
-                  Home Decor
-                </button>
-              </li>
+              {featuredCategoryLinks.map((category) => (
+                <li key={category.id}>
+                  <button
+                    onClick={() =>
+                      router.push(`/shop?category=${category.slug}`)
+                    }
+                    className="hover:text-rose-500 transition-colors cursor-pointer"
+                  >
+                    {category.name}
+                  </button>
+                </li>
+              ))}
             </ul>
           </div>
 

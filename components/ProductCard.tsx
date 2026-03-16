@@ -6,6 +6,11 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
+import {
+  DEFAULT_PRODUCT_IMAGE_URL,
+  getProductPrimaryImage,
+  isUnoptimizedImageUrl,
+} from "../utils/productImages";
 
 interface ProductCardProps {
   product: Product;
@@ -15,11 +20,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const { addToCart } = useCart();
   const [isFavorite, setIsFavorite] = React.useState(false);
+  const [imageSrc, setImageSrc] = React.useState(() =>
+    getProductPrimaryImage(product),
+  );
 
   React.useEffect(() => {
     const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
     setIsFavorite(favorites.includes(product.id));
   }, [product.id]);
+
+  React.useEffect(() => {
+    setImageSrc(getProductPrimaryImage(product));
+  }, [product]);
 
   const handleCardClick = () => {
     router.push(`/shop/${product.slug}`);
@@ -63,8 +75,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           height={500}
           loading="lazy"
           quality={80}
-          src={product.image}
+          src={imageSrc}
           alt={product.name}
+          unoptimized={isUnoptimizedImageUrl(imageSrc)}
+          onError={() => setImageSrc(DEFAULT_PRODUCT_IMAGE_URL)}
           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
         />
 
@@ -86,16 +100,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         <div className="absolute bottom-0 left-0 bg-white/90 backdrop-blur px-4 py-1 rounded-tr-xl">
           <span className="text-xs font-bold text-earthy-brown uppercase tracking-wider">
-            {product.category}
+            {product.category?.name ?? ""}
           </span>
         </div>
       </div>
 
-      <div className="p-6 flex flex-col flex-grow">
+      <div className="p-6 flex flex-col grow">
         <motion.h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-rose-500 transition-colors">
           {product.name}
         </motion.h3>
-        <p className="text-gray-500 text-sm mb-4 line-clamp-2 flex-grow">
+        <p className="text-gray-500 text-sm mb-4 line-clamp-2 grow">
           {product.description}
         </p>
 
