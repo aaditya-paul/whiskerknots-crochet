@@ -86,7 +86,10 @@ function ProductPage() {
         </motion.button>
       </div>
 
-      <ProductDetailView product={product} onNavigateCare={() => router.push("/care")} />
+      <ProductDetailView
+        product={product}
+        onNavigateCare={() => router.push("/care")}
+      />
 
       {/* Customer Reviews */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">

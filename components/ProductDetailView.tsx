@@ -162,7 +162,9 @@ export default function ProductDetailView({
                 whileTap={{ scale: previewMode ? 1 : 0.95 }}
                 onClick={handleToggleFavorite}
                 className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition-colors ${
-                  isFavorite ? "bg-rose-400 text-white" : "bg-white text-gray-400"
+                  isFavorite
+                    ? "bg-rose-400 text-white"
+                    : "bg-white text-gray-400"
                 }`}
                 disabled={previewMode}
               >
@@ -218,7 +220,9 @@ export default function ProductDetailView({
                 {product.name}
               </h1>
               {product.shortDescription && (
-                <p className="text-lg text-gray-600 mb-4">{product.shortDescription}</p>
+                <p className="text-lg text-gray-600 mb-4">
+                  {product.shortDescription}
+                </p>
               )}
               <div className="flex items-center gap-2 mb-4">
                 {[...Array(5)].map((_, i) => (
@@ -241,7 +245,8 @@ export default function ProductDetailView({
                         ₹{product.compareAtPrice.toFixed(2)}
                       </span>
                       <span className="text-sm font-bold text-emerald-600">
-                        Save ₹{(product.compareAtPrice - product.price).toFixed(2)}
+                        Save ₹
+                        {(product.compareAtPrice - product.price).toFixed(2)}
                       </span>
                     </>
                   )}
@@ -272,20 +277,27 @@ export default function ProductDetailView({
                 className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100"
               >
                 <Package className="mx-auto text-rose-400 mb-2" size={24} />
-                <p className="text-xs font-bold text-gray-700">Handmade with Love</p>
+                <p className="text-xs font-bold text-gray-700">
+                  Handmade with Love
+                </p>
               </motion.div>
               <motion.div
                 whileHover={{ y: previewMode ? 0 : -4 }}
                 className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100"
               >
                 <Shield className="mx-auto text-leaf-green mb-2" size={24} />
-                <p className="text-xs font-bold text-gray-700">Quality Guaranteed</p>
+                <p className="text-xs font-bold text-gray-700">
+                  Quality Guaranteed
+                </p>
               </motion.div>
               <motion.div
                 whileHover={{ y: previewMode ? 0 : -4 }}
                 className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100"
               >
-                <Sparkles className="mx-auto text-sunny-yellow mb-2" size={24} />
+                <Sparkles
+                  className="mx-auto text-sunny-yellow mb-2"
+                  size={24}
+                />
                 <p className="text-xs font-bold text-gray-700">One of a Kind</p>
               </motion.div>
             </div>
@@ -302,7 +314,9 @@ export default function ProductDetailView({
                   >
                     <Minus size={20} className="text-gray-600" />
                   </motion.button>
-                  <span className="px-6 font-bold text-lg text-earthy-brown">{quantity}</span>
+                  <span className="px-6 font-bold text-lg text-earthy-brown">
+                    {quantity}
+                  </span>
                   <motion.button
                     whileTap={{ scale: previewMode ? 1 : 0.9 }}
                     onClick={() => setQuantity(quantity + 1)}
@@ -327,7 +341,9 @@ export default function ProductDetailView({
                 disabled={previewMode}
               >
                 <ShoppingCart size={20} />
-                <span>{previewMode ? "Add to Cart (Preview)" : "Add to Cart"}</span>
+                <span>
+                  {previewMode ? "Add to Cart (Preview)" : "Add to Cart"}
+                </span>
               </motion.button>
               <motion.button
                 whileHover={{ scale: previewMode ? 1 : 1.05 }}
@@ -369,9 +385,11 @@ export default function ProductDetailView({
                   typeof product.width === "number" ||
                   typeof product.height === "number") && (
                   <p className="text-gray-700">
-                    <span className="font-semibold text-gray-500">Dimensions:</span>{" "}
-                    {product.length ?? "-"} x {product.width ?? "-"} x {product.height ?? "-"}{" "}
-                    {product.dimensionUnit || "cm"}
+                    <span className="font-semibold text-gray-500">
+                      Dimensions:
+                    </span>{" "}
+                    {product.length ?? "-"} x {product.width ?? "-"} x{" "}
+                    {product.height ?? "-"} {product.dimensionUnit || "cm"}
                   </p>
                 )}
               </div>
@@ -379,7 +397,9 @@ export default function ProductDetailView({
 
             {product.variants && product.variants.length > 0 && (
               <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-3">
-                <h3 className="font-bold text-earthy-brown">Available Variants</h3>
+                <h3 className="font-bold text-earthy-brown">
+                  Available Variants
+                </h3>
                 <div className="space-y-2">
                   {product.variants.map((variant) => (
                     <div
@@ -387,7 +407,9 @@ export default function ProductDetailView({
                       className="rounded-xl border border-gray-200 px-3 py-2"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-semibold text-gray-800">{variant.name}</p>
+                        <p className="font-semibold text-gray-800">
+                          {variant.name}
+                        </p>
                         <p className="text-sm text-rose-500 font-semibold">
                           {typeof variant.price === "number"
                             ? `₹${variant.price.toFixed(2)}`
@@ -411,19 +433,26 @@ export default function ProductDetailView({
               </div>
             )}
 
-            {product.customFields && Object.keys(product.customFields).length > 0 && (
-              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-2">
-                <h3 className="font-bold text-earthy-brown">Additional Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                  {Object.entries(product.customFields).map(([key, value]) => (
-                    <p key={key} className="text-gray-700">
-                      <span className="font-semibold text-gray-500">{key}:</span>{" "}
-                      {String(value)}
-                    </p>
-                  ))}
+            {product.customFields &&
+              Object.keys(product.customFields).length > 0 && (
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-2">
+                  <h3 className="font-bold text-earthy-brown">
+                    Additional Information
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                    {Object.entries(product.customFields).map(
+                      ([key, value]) => (
+                        <p key={key} className="text-gray-700">
+                          <span className="font-semibold text-gray-500">
+                            {key}:
+                          </span>{" "}
+                          {String(value)}
+                        </p>
+                      ),
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             <div className="bg-leaf-green/10 rounded-2xl p-6 border border-leaf-green/30">
               <h3 className="font-bold text-earthy-brown mb-3 flex items-center gap-2">

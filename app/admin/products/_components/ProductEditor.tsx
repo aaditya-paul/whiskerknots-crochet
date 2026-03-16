@@ -274,7 +274,9 @@ function ImageManager({
 
     const availableSlots = MAX_PRODUCT_IMAGES - images.length;
     if (availableSlots <= 0) {
-      onLimitReached(`You can upload up to ${MAX_PRODUCT_IMAGES} images per product.`);
+      onLimitReached(
+        `You can upload up to ${MAX_PRODUCT_IMAGES} images per product.`,
+      );
       return;
     }
 
@@ -304,7 +306,9 @@ function ImageManager({
   const addUrl = () => {
     if (!urlInput.trim()) return;
     if (images.length >= MAX_PRODUCT_IMAGES) {
-      onLimitReached(`You can upload up to ${MAX_PRODUCT_IMAGES} images per product.`);
+      onLimitReached(
+        `You can upload up to ${MAX_PRODUCT_IMAGES} images per product.`,
+      );
       return;
     }
 
@@ -502,8 +506,8 @@ function ImageManager({
       {images.length > 0 && (
         <p className="text-xs text-gray-400">
           <Star size={11} className="inline mr-0.5 text-rose-400" />
-          Click the star on any image to set it as the product thumbnail. {images.length}/
-          {MAX_PRODUCT_IMAGES} used.
+          Click the star on any image to set it as the product thumbnail.{" "}
+          {images.length}/{MAX_PRODUCT_IMAGES} used.
         </p>
       )}
     </div>
@@ -914,7 +918,8 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
     sku: form.sku.trim() || undefined,
     barcode: form.barcode.trim() || undefined,
     inStock: form.inStock,
-    quantity: form.trackQuantity && form.quantity ? parseInt(form.quantity) : undefined,
+    quantity:
+      form.trackQuantity && form.quantity ? parseInt(form.quantity) : undefined,
     trackQuantity: form.trackQuantity,
     allowBackorder: form.allowBackorder,
     weight: parseMoney(form.weight),
@@ -1231,7 +1236,8 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
                 </div>
                 <div className="px-3 pt-3 pb-1">
                   <p className="text-xs text-gray-500 mb-3">
-                    Gallery slots used: {previewGallery.length}/{MAX_PRODUCT_IMAGES}
+                    Gallery slots used: {previewGallery.length}/
+                    {MAX_PRODUCT_IMAGES}
                   </p>
                 </div>
                 <div className="max-h-225 overflow-y-auto border-t border-gray-100">
