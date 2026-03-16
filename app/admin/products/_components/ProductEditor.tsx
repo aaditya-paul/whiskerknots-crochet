@@ -46,7 +46,10 @@ import {
   getReadableCmsError,
   ProductWriteData,
 } from "@/services/productCmsService";
-import { Category, ProductStatus } from "@/types/types";
+import { Category, Product, ProductStatus } from "@/types/types";
+import ProductCard from "@/components/ProductCard";
+import ProductDetailView from "@/components/ProductDetailView";
+import { getProductGalleryImages } from "@/utils/productImages";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -150,6 +153,8 @@ const parseMoney = (v: string) => {
   return isNaN(n) ? undefined : n;
 };
 
+const MAX_PRODUCT_IMAGES = 5;
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function Section({
@@ -217,10 +222,12 @@ function ImageManager({
   images,
   onChange,
   productId,
+  onLimitReached,
 }: {
   images: ImageDraft[];
   onChange: React.Dispatch<React.SetStateAction<ImageDraft[]>>;
   productId?: string;
+  onLimitReached: (message: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [urlInput, setUrlInput] = useState("");
@@ -264,8 +271,20 @@ function ImageManager({
 
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
+
+    const availableSlots = MAX_PRODUCT_IMAGES - images.length;
+    if (availableSlots <= 0) {
+      onLimitReached(`You can upload up to ${MAX_PRODUCT_IMAGES} images per product.`);
+      return;
+    }
+
     const startIndex = images.length;
-    const newImgs: ImageDraft[] = Array.from(files).map((f) => ({
+    const selectedFiles = Array.from(files).slice(0, availableSlots);
+    if (selectedFiles.length < files.length) {
+      onLimitReached(`Only the first ${MAX_PRODUCT_IMAGES} images were added.`);
+    }
+
+    const newImgs: ImageDraft[] = selectedFiles.map((f) => ({
       url: URL.createObjectURL(f),
       alt: f.name.replace(/\.[^.]+$/, ""),
       isThumbnail: images.length === 0,
@@ -284,6 +303,11 @@ function ImageManager({
 
   const addUrl = () => {
     if (!urlInput.trim()) return;
+    if (images.length >= MAX_PRODUCT_IMAGES) {
+      onLimitReached(`You can upload up to ${MAX_PRODUCT_IMAGES} images per product.`);
+      return;
+    }
+
     onChange((prev) => [
       ...prev,
       {
@@ -430,6 +454,7 @@ function ImageManager({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
+          disabled={images.length >= MAX_PRODUCT_IMAGES}
           className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-xl text-sm text-gray-600 hover:border-rose-400 hover:text-rose-500 transition-colors"
         >
           <Upload size={15} />
@@ -466,7 +491,7 @@ function ImageManager({
           <button
             type="button"
             onClick={addUrl}
-            disabled={!urlInput.trim()}
+            disabled={!urlInput.trim() || images.length >= MAX_PRODUCT_IMAGES}
             className="px-3 py-2 bg-gray-900 text-white rounded-xl text-sm hover:bg-gray-700 disabled:opacity-40 transition-colors"
           >
             <Link2 size={15} />
@@ -477,7 +502,8 @@ function ImageManager({
       {images.length > 0 && (
         <p className="text-xs text-gray-400">
           <Star size={11} className="inline mr-0.5 text-rose-400" />
-          Click the star on any image to set it as the product thumbnail.
+          Click the star on any image to set it as the product thumbnail. {images.length}/
+          {MAX_PRODUCT_IMAGES} used.
         </p>
       )}
     </div>
@@ -712,6 +738,12 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
       try {
         const cats = await adminFetchCategories();
         setCategories(cats);
+        if (!productId && cats.length > 0) {
+          setForm((prev) => ({
+            ...prev,
+            categoryId: prev.categoryId || cats[0].id,
+          }));
+        }
 
         if (productId) {
           const product = await adminFetchProduct(productId);
@@ -804,7 +836,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
     description: form.description.trim() || undefined,
     shortDescription: form.shortDescription.trim() || undefined,
     status: form.status,
-    categoryId: form.categoryId || undefined,
+    categoryId: form.categoryId,
     price: parseMoney(form.price) ?? 0,
     compareAtPrice: parseMoney(form.compareAtPrice),
     costPerItem: parseMoney(form.costPerItem),
@@ -840,28 +872,113 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
         : undefined,
   });
 
-  const previewImageUrls = images
-    .map((img) => img.url)
-    .filter((url) => Boolean(url));
-  const previewPrimaryImage =
-    images.find((img) => img.isThumbnail)?.url ||
-    previewImageUrls[0] ||
-    "https://picsum.photos/800/800";
-  const previewName = form.name.trim() || "Untitled Product";
-  const previewDescription =
-    form.shortDescription.trim() ||
-    form.description.trim() ||
-    "Product description preview";
-  const previewPrice = parseMoney(form.price) ?? 0;
   const previewCategory =
-    categories.find((category) => category.id === form.categoryId)?.name ||
-    "Uncategorized";
+    categories.find((category) => category.id === form.categoryId) ??
+    categories[0];
+  const previewProduct: Product = {
+    id: productId ?? "preview-product",
+    name: form.name.trim() || "Untitled Product",
+    slug: slugify(form.slug || form.name || "preview-product"),
+    description: form.description.trim() || "Product description preview",
+    shortDescription: form.shortDescription.trim() || undefined,
+    status: form.status,
+    categoryId: previewCategory?.id || "preview-category",
+    category: previewCategory
+      ? {
+          id: previewCategory.id,
+          name: previewCategory.name,
+          slug: previewCategory.slug,
+        }
+      : {
+          id: "preview-category",
+          name: "Crochet Essentials",
+          slug: "crochet-essentials",
+        },
+    price: parseMoney(form.price) ?? 0,
+    compareAtPrice: parseMoney(form.compareAtPrice),
+    costPerItem: parseMoney(form.costPerItem),
+    thumbnailUrl:
+      images.find((img) => img.isThumbnail)?.url || images[0]?.url || undefined,
+    image:
+      images.find((img) => img.isThumbnail)?.url || images[0]?.url || undefined,
+    images: images.slice(0, MAX_PRODUCT_IMAGES).map((img, index) => ({
+      id: img.id ?? `preview-image-${index}`,
+      productId: productId ?? "preview-product",
+      url: img.url,
+      storagePath: img.storagePath,
+      alt: img.alt || `Product image ${index + 1}`,
+      isThumbnail: img.isThumbnail,
+      sortOrder: index,
+      createdAt: new Date().toISOString(),
+    })),
+    sku: form.sku.trim() || undefined,
+    barcode: form.barcode.trim() || undefined,
+    inStock: form.inStock,
+    quantity: form.trackQuantity && form.quantity ? parseInt(form.quantity) : undefined,
+    trackQuantity: form.trackQuantity,
+    allowBackorder: form.allowBackorder,
+    weight: parseMoney(form.weight),
+    weightUnit: form.weightUnit || undefined,
+    length: parseMoney(form.length),
+    width: parseMoney(form.width),
+    height: parseMoney(form.height),
+    dimensionUnit: form.dimensionUnit || undefined,
+    tags: form.tags
+      ? form.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      : [],
+    isFeatured: form.isFeatured,
+    isNew: form.isNew,
+    sortOrder: parseInt(form.sortOrder) || 0,
+    seoTitle: form.seoTitle.trim() || undefined,
+    seoDescription: form.seoDescription.trim() || undefined,
+    customFields:
+      customFields.length > 0
+        ? Object.fromEntries(
+            customFields
+              .filter((field) => field.key.trim())
+              .map((field) => [field.key, field.value]),
+          )
+        : undefined,
+    variants: variants
+      .filter((variant) => variant.name.trim())
+      .map((variant, index) => ({
+        id: variant.id ?? `preview-variant-${index}`,
+        productId: productId ?? "preview-product",
+        name: variant.name,
+        sku: variant.sku.trim() || undefined,
+        price: parseMoney(variant.price),
+        compareAtPrice: parseMoney(variant.compareAtPrice),
+        quantity: variant.quantity ? parseInt(variant.quantity) : undefined,
+        inStock: variant.inStock,
+        attributes: Object.fromEntries(
+          variant.attributes
+            .filter((attribute) => attribute.key.trim())
+            .map((attribute) => [attribute.key, attribute.value]),
+        ),
+        sortOrder: index,
+        createdAt: new Date().toISOString(),
+      })),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  const previewGallery = getProductGalleryImages(previewProduct).slice(
+    0,
+    MAX_PRODUCT_IMAGES,
+  );
 
   const validate = (): string | null => {
+    if (categories.length === 0)
+      return "At least one category is required before creating products.";
     if (!form.name.trim()) return "Product name is required.";
+    if (!form.categoryId) return "Category is required.";
     if (!form.price.trim() || isNaN(parseFloat(form.price)))
       return "A valid price is required.";
     if (parseFloat(form.price) < 0) return "Price cannot be negative.";
+    if (images.length > MAX_PRODUCT_IMAGES)
+      return `You can upload up to ${MAX_PRODUCT_IMAGES} images per product.`;
     return null;
   };
 
@@ -1088,6 +1205,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
               images={images}
               onChange={setImages}
               productId={resolvedIdRef.current}
+              onLimitReached={(message) => setSaveError(message)}
             />
           </Section>
 
@@ -1097,85 +1215,27 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
               product detail page.
             </p>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid gap-4">
               <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
                 <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500">
-                  Product Card Preview
+                  Product Card Preview (Real Component)
                 </div>
-                <div className="p-3">
-                  <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100">
-                    <div className="relative aspect-square bg-gray-100 overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={previewPrimaryImage}
-                        alt={previewName}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute bottom-0 left-0 bg-white/90 backdrop-blur px-3 py-1 rounded-tr-xl">
-                        <span className="text-[11px] font-bold text-earthy-brown uppercase tracking-wider">
-                          {previewCategory}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-4 space-y-2">
-                      <h3 className="text-sm font-bold text-gray-800 line-clamp-1">
-                        {previewName}
-                      </h3>
-                      <p className="text-xs text-gray-500 line-clamp-2">
-                        {previewDescription}
-                      </p>
-                      <p className="text-base font-bold text-earthy-brown">
-                        ₹{previewPrice.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
+                <div className="p-3 max-w-sm pointer-events-none">
+                  <ProductCard product={previewProduct} />
                 </div>
               </div>
 
               <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
                 <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500">
-                  Product Page Preview
+                  Product Page Preview (Real Component)
                 </div>
-                <div className="p-3 space-y-3">
-                  <div className="aspect-video rounded-2xl overflow-hidden bg-gray-100 border border-gray-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={previewPrimaryImage}
-                      alt={previewName}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-gray-400">
-                      {previewCategory}
-                    </p>
-                    <h3 className="text-lg font-bold text-earthy-brown line-clamp-1">
-                      {previewName}
-                    </h3>
-                    <p className="text-lg font-bold text-rose-500">
-                      ₹{previewPrice.toFixed(2)}
-                    </p>
-                    <p className="text-xs text-gray-600 line-clamp-3">
-                      {previewDescription}
-                    </p>
-                  </div>
-                  {previewImageUrls.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto">
-                      {previewImageUrls.slice(0, 4).map((url, index) => (
-                        <div
-                          key={`${url}-${index}`}
-                          className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 shrink-0"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={url}
-                            alt={`${previewName} ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div className="px-3 pt-3 pb-1">
+                  <p className="text-xs text-gray-500 mb-3">
+                    Gallery slots used: {previewGallery.length}/{MAX_PRODUCT_IMAGES}
+                  </p>
+                </div>
+                <div className="max-h-225 overflow-y-auto border-t border-gray-100">
+                  <ProductDetailView product={previewProduct} previewMode />
                 </div>
               </div>
             </div>
@@ -1467,13 +1527,16 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
             <h2 className="font-semibold text-gray-800 text-sm">
               Organisation
             </h2>
-            <Field label="Category">
+            <Field label="Category" required>
               <select
                 value={form.categoryId}
                 onChange={(e) => set("categoryId", e.target.value)}
                 className={inputCls}
+                required
               >
-                <option value="">No category</option>
+                <option value="" disabled>
+                  Select a category
+                </option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}

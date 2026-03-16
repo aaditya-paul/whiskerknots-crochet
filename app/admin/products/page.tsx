@@ -78,7 +78,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, router]);
 
   const filtered = useMemo(() => {
     let list = [...products];

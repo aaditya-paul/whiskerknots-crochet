@@ -136,7 +136,7 @@ const rowToProduct = (row: any): Product => {
     description: row.description ?? undefined,
     shortDescription: row.short_description ?? undefined,
     status: row.status,
-    categoryId: row.category_id ?? undefined,
+    categoryId: row.category_id,
     category: row.category
       ? {
           id: row.category.id,
@@ -419,7 +419,7 @@ export type ProductWriteData = {
   description?: string;
   shortDescription?: string;
   status: "active" | "draft" | "archived";
-  categoryId?: string;
+  categoryId: string;
   price: number;
   compareAtPrice?: number;
   costPerItem?: number;
@@ -451,7 +451,7 @@ const productWritePayload = (d: ProductWriteData) => ({
   description: d.description ?? null,
   short_description: d.shortDescription ?? null,
   status: d.status,
-  category_id: d.categoryId ?? null,
+  category_id: d.categoryId,
   price: d.price,
   compare_at_price: d.compareAtPrice ?? null,
   cost_per_item: d.costPerItem ?? null,

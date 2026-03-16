@@ -21,6 +21,7 @@ import {
   getReadableCmsError,
 } from "@/services/productCmsService";
 import { Category } from "@/types/types";
+import { useRouter } from "next/navigation";
 
 // ─── Empty form state ─────────────────────────────────────────────────────────
 
@@ -283,7 +284,7 @@ export default function CategoriesPage() {
     "sortOrder",
   );
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
+  const router = useRouter();
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -298,7 +299,7 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, router]);
 
   const sorted = [...categories].sort((a, b) => {
     const dir = sortDir === "asc" ? 1 : -1;

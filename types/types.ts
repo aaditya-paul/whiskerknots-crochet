@@ -57,7 +57,7 @@ export interface Product {
   description?: string;
   shortDescription?: string;
   status: ProductStatus;
-  categoryId?: string;
+  categoryId: string;
   category?: Pick<Category, "id" | "name" | "slug">;
 
   // Pricing
