@@ -1093,7 +1093,8 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
 
           <Section title="Live Storefront Preview" defaultOpen>
             <p className="text-xs text-gray-500">
-              Instant preview of how this product will look in the shop card and product detail page.
+              Instant preview of how this product will look in the shop card and
+              product detail page.
             </p>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -1117,9 +1118,15 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
                       </div>
                     </div>
                     <div className="p-4 space-y-2">
-                      <h3 className="text-sm font-bold text-gray-800 line-clamp-1">{previewName}</h3>
-                      <p className="text-xs text-gray-500 line-clamp-2">{previewDescription}</p>
-                      <p className="text-base font-bold text-earthy-brown">₹{previewPrice.toFixed(2)}</p>
+                      <h3 className="text-sm font-bold text-gray-800 line-clamp-1">
+                        {previewName}
+                      </h3>
+                      <p className="text-xs text-gray-500 line-clamp-2">
+                        {previewDescription}
+                      </p>
+                      <p className="text-base font-bold text-earthy-brown">
+                        ₹{previewPrice.toFixed(2)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1139,10 +1146,18 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
                     />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-gray-400">{previewCategory}</p>
-                    <h3 className="text-lg font-bold text-earthy-brown line-clamp-1">{previewName}</h3>
-                    <p className="text-lg font-bold text-rose-500">₹{previewPrice.toFixed(2)}</p>
-                    <p className="text-xs text-gray-600 line-clamp-3">{previewDescription}</p>
+                    <p className="text-xs uppercase tracking-wide text-gray-400">
+                      {previewCategory}
+                    </p>
+                    <h3 className="text-lg font-bold text-earthy-brown line-clamp-1">
+                      {previewName}
+                    </h3>
+                    <p className="text-lg font-bold text-rose-500">
+                      ₹{previewPrice.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-gray-600 line-clamp-3">
+                      {previewDescription}
+                    </p>
                   </div>
                   {previewImageUrls.length > 1 && (
                     <div className="flex gap-2 overflow-x-auto">
@@ -1152,7 +1167,11 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
                           className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 shrink-0"
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={url} alt={`${previewName} ${index + 1}`} className="w-full h-full object-cover" />
+                          <img
+                            src={url}
+                            alt={`${previewName} ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                       ))}
                     </div>
