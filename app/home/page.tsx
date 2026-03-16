@@ -3,11 +3,12 @@
 import React from "react";
 import Image from "next/image";
 import { ArrowRight, Star } from "lucide-react";
-import { PRODUCTS, TESTIMONIALS } from "../../constants/constants";
+import { TESTIMONIALS } from "../../constants/constants";
 import ProductCard from "../../components/ProductCard";
 import type { Product, Testimonial } from "../../types/types";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useProducts } from "../../hooks/useProducts";
 import {
   fadeInUp,
   fadeIn,
@@ -18,7 +19,8 @@ import {
 } from "../../utils/animations";
 
 function Home() {
-  const featuredProducts = PRODUCTS.filter((p) => p.isFeatured).slice(0, 3);
+  const { products } = useProducts();
+  const featuredProducts = products.filter((p) => p.isFeatured).slice(0, 3);
   const router = useRouter();
 
   return (

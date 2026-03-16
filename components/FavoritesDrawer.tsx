@@ -2,23 +2,24 @@
 import React, { useState, useEffect } from "react";
 import { X, Heart, ShoppingCart, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PRODUCTS } from "../constants/constants";
 import { Product } from "../types/types";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
+import { useProducts } from "../hooks/useProducts";
 
 const FavoritesDrawer: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [favorites, setFavorites] = useState<Product[]>([]);
   const router = useRouter();
   const { addToCart } = useCart();
+  const { products } = useProducts();
 
   useEffect(() => {
     const loadFavorites = () => {
       const favoriteIds = JSON.parse(localStorage.getItem("favorites") || "[]");
-      const favoriteProducts = PRODUCTS.filter((product) =>
-        favoriteIds.includes(product.id)
+      const favoriteProducts = products.filter((product) =>
+        favoriteIds.includes(product.id),
       );
       setFavorites(favoriteProducts);
     };
@@ -40,12 +41,12 @@ const FavoritesDrawer: React.FC = () => {
       window.removeEventListener("favoritesChanged", handleFavoritesChanged);
       window.removeEventListener("openFavorites", handleOpenFavorites);
     };
-  }, []);
+  }, [products]);
 
   const handleRemoveFavorite = (productId: string) => {
     const favoriteIds = JSON.parse(localStorage.getItem("favorites") || "[]");
     const updatedFavorites = favoriteIds.filter(
-      (id: string) => id !== productId
+      (id: string) => id !== productId,
     );
     localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
     setFavorites(favorites.filter((product) => product.id !== productId));
@@ -81,7 +82,7 @@ const FavoritesDrawer: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-full sm:w-[450px] bg-cozy-cream shadow-2xl z-50 flex flex-col"
+              className="fixed right-0 top-0 h-full w-full sm:w-112.5 bg-cozy-cream shadow-2xl z-50 flex flex-col"
             >
               {/* Header */}
               <div className="bg-white border-b border-gray-200 p-6">
@@ -141,7 +142,7 @@ const FavoritesDrawer: React.FC = () => {
                         <div className="flex gap-4">
                           <div
                             onClick={() => handleProductClick(product.slug)}
-                            className="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer"
+                            className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 cursor-pointer"
                           >
                             <Image
                               src={product.image}

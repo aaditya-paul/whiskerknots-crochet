@@ -26,16 +26,20 @@ function LoginForm() {
       await login(email, password);
       router.push(redirect || "/");
     } catch (err: unknown) {
-      const error = err as { code?: string };
+      const error = err as { code?: string; message?: string; status?: number };
+      const message = (error.message || "").toLowerCase();
       console.error("Login error:", err);
-      if (error.code === "auth/invalid-credential") {
+      if (
+        message.includes("invalid login credentials") ||
+        error.code === "invalid_credentials"
+      ) {
         setError("Invalid email or password");
+      } else if (message.includes("email not confirmed")) {
+        setError("Please confirm your email before signing in");
+      } else if (error.status === 429) {
+        setError("Too many failed attempts. Please try again later");
       } else if (error.code === "auth/user-not-found") {
         setError("No account found with this email");
-      } else if (error.code === "auth/wrong-password") {
-        setError("Incorrect password");
-      } else if (error.code === "auth/too-many-requests") {
-        setError("Too many failed attempts. Please try again later");
       } else {
         setError("Failed to sign in. Please try again");
       }
@@ -93,7 +97,7 @@ function LoginForm() {
                 className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3"
               >
                 <AlertCircle
-                  className="text-red-500 flex-shrink-0 mt-0.5"
+                  className="text-red-500 shrink-0 mt-0.5"
                   size={20}
                 />
                 <p className="text-red-700 text-sm font-sans">{error}</p>
@@ -154,7 +158,7 @@ function LoginForm() {
               disabled={isLoading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-gradient-to-r from-rose-400 to-rose-500 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-linear-to-r from-rose-400 to-rose-500 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>

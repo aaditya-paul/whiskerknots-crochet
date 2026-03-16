@@ -15,18 +15,20 @@ import {
   Plus,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { PRODUCTS, TESTIMONIALS } from "../../../constants/constants";
+import { TESTIMONIALS } from "../../../constants/constants";
 import ProductCard from "../../../components/ProductCard";
 import { fadeInUp, staggerContainer } from "../../../utils/animations";
 import { useCart } from "../../../context/CartContext";
+import { useProducts } from "../../../hooks/useProducts";
 
 function ProductPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
   const { addToCart } = useCart();
+  const { products, loading } = useProducts();
 
-  const product = PRODUCTS.find((p) => p.slug === slug);
+  const product = products.find((p) => p.slug === slug);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -39,6 +41,14 @@ function ProductPage() {
       setIsFavorite(favorites.includes(product.id));
     }
   }, [product]);
+
+  if (loading && !product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-rose-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -62,9 +72,9 @@ function ProductPage() {
   const productImages = [product.image, product.image, product.image];
 
   // Related products (same category, excluding current)
-  const relatedProducts = PRODUCTS.filter(
-    (p) => p.category === product.category && p.id !== product.id
-  ).slice(0, 3);
+  const relatedProducts = products
+    .filter((p) => p.category === product.category && p.id !== product.id)
+    .slice(0, 3);
 
   const handleAddToCart = () => {
     if (product) {

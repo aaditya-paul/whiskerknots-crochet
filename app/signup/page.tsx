@@ -57,14 +57,20 @@ function SignupPage() {
       await signup(formData.email, formData.password, formData.displayName);
       router.push("/");
     } catch (err: unknown) {
-      const error = err as { code?: string };
+      const error = err as { code?: string; message?: string; status?: number };
+      const message = (error.message || "").toLowerCase();
       console.error("Signup error:", err);
-      if (error.code === "auth/email-already-in-use") {
+      if (
+        message.includes("already registered") ||
+        message.includes("already been registered")
+      ) {
         setError("An account with this email already exists");
-      } else if (error.code === "auth/invalid-email") {
+      } else if (message.includes("invalid email")) {
         setError("Invalid email address");
-      } else if (error.code === "auth/weak-password") {
+      } else if (message.includes("password") && message.includes("weak")) {
         setError("Password is too weak");
+      } else if (error.status === 429) {
+        setError("Too many requests. Please try again shortly");
       } else {
         setError("Failed to create account. Please try again");
       }
@@ -122,7 +128,7 @@ function SignupPage() {
                 className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3"
               >
                 <AlertCircle
-                  className="text-red-500 flex-shrink-0 mt-0.5"
+                  className="text-red-500 shrink-0 mt-0.5"
                   size={20}
                 />
                 <p className="text-red-700 text-sm font-sans">{error}</p>
@@ -244,7 +250,7 @@ function SignupPage() {
               disabled={isLoading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-gradient-to-r from-rose-400 to-rose-500 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-linear-to-r from-rose-400 to-rose-500 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>

@@ -1,6 +1,5 @@
 "use client";
 import React, { useMemo } from "react";
-import { PRODUCTS } from "../../constants/constants";
 import ProductCard from "../../components/ProductCard";
 import { Product } from "../../types/types";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,10 +7,12 @@ import capitaliseFirstLetter from "@/utils/capitaliseFirstLetter";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeInUp, staggerContainer } from "../../utils/animations";
 import NotFound from "../not-found";
+import { useProducts } from "../../hooks/useProducts";
 
 const Shop: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { products } = useProducts();
 
   // 1. Extract the category from URL
   const activeCategory = searchParams.get("category") || "all";
@@ -20,12 +21,12 @@ const Shop: React.FC = () => {
   // 2. Derived filtered products based on active category
   const filteredProducts = useMemo<Product[]>(() => {
     if (activeCategory === "all") {
-      return PRODUCTS;
+      return products;
     }
-    return PRODUCTS.filter(
-      (p) => p.category.toLowerCase() === activeCategory.toLowerCase()
+    return products.filter(
+      (p) => p.category.toLowerCase() === activeCategory.toLowerCase(),
     );
-  }, [activeCategory]);
+  }, [activeCategory, products]);
 
   if (!categories.includes(activeCategory)) {
     return <NotFound />;

@@ -12,6 +12,8 @@ export default function FavoritesSyncProvider() {
       const cleanup = setupFavoritesSync(user.uid);
       return cleanup;
     }
+
+    return undefined;
   }, [user]);
 
   return null;

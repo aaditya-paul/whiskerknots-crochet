@@ -6,16 +6,14 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import {
-  User,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-} from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { auth, db } from "../lib/firebase";
+import { supabase } from "../lib/supabase";
+
+interface AuthUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}
 
 interface UserProfile {
   uid: string;
@@ -26,13 +24,13 @@ interface UserProfile {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   userProfile: UserProfile | null;
   loading: boolean;
   signup: (
     email: string,
     password: string,
-    displayName: string
+    displayName: string,
   ) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -44,102 +42,184 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const loadOrCreateProfile = async (authUser: AuthUser) => {
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("id,email,display_name,photo_url,created_at")
+      .eq("id", authUser.uid)
+      .single();
+
+    if (profileError && profileError.code !== "PGRST116") {
+      throw profileError;
+    }
+
+    if (profileData) {
+      const profile: UserProfile = {
+        uid: profileData.id,
+        email: profileData.email || authUser.email || "",
+        displayName: profileData.display_name,
+        photoURL: profileData.photo_url,
+        createdAt: profileData.created_at || new Date().toISOString(),
+      };
+
+      setUserProfile(profile);
+      return;
+    }
+
+    const profileToCreate: UserProfile = {
+      uid: authUser.uid,
+      email: authUser.email || "",
+      displayName:
+        authUser.displayName || authUser.email?.split("@")[0] || "User",
+      photoURL: authUser.photoURL,
+      createdAt: new Date().toISOString(),
+    };
+
+    const { error: upsertError } = await supabase.from("profiles").upsert({
+      id: profileToCreate.uid,
+      email: profileToCreate.email,
+      display_name: profileToCreate.displayName,
+      photo_url: profileToCreate.photoURL,
+      created_at: profileToCreate.createdAt,
+    });
+
+    if (upsertError) {
+      throw upsertError;
+    }
+
+    setUserProfile(profileToCreate);
+  };
+
+  const mapSupabaseUser = (source: {
+    id: string;
+    email?: string | null;
+    user_metadata?: { full_name?: string; avatar_url?: string };
+  }): AuthUser => {
+    return {
+      uid: source.id,
+      email: source.email || null,
+      displayName: source.user_metadata?.full_name || null,
+      photoURL: source.user_metadata?.avatar_url || null,
+    };
+  };
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log("Auth state changed:", user ? user.email : "No user");
-      setUser(user);
+    let mounted = true;
 
-      if (user) {
+    const initializeAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      if (session?.user) {
+        const mappedUser = mapSupabaseUser(session.user);
+        setUser(mappedUser);
+
         try {
-          // Fetch user profile from Firestore
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (userDoc.exists()) {
-            const profileData = userDoc.data() as UserProfile;
-            console.log("Profile loaded from Firestore:", profileData);
-            setUserProfile(profileData);
-          } else {
-            // Create profile if it doesn't exist
-            console.log("Creating new profile for user:", user.email);
-            const profile: UserProfile = {
-              uid: user.uid,
-              email: user.email || "",
-              displayName:
-                user.displayName || user.email?.split("@")[0] || "User",
-              photoURL: user.photoURL,
-              createdAt: new Date().toISOString(),
-            };
-            await setDoc(userDocRef, profile);
-            // Also update Firebase Auth profile
-            await updateProfile(user, { displayName: profile.displayName });
-            setUserProfile(profile);
-            console.log("New profile created:", profile);
-          }
+          await loadOrCreateProfile(mappedUser);
         } catch (error) {
           console.error("Error fetching/creating user profile:", error);
-          // Fallback to auth data if Firestore fails
-          const fallbackProfile: UserProfile = {
-            uid: user.uid,
-            email: user.email || "",
+          setUserProfile({
+            uid: mappedUser.uid,
+            email: mappedUser.email || "",
             displayName:
-              user.displayName || user.email?.split("@")[0] || "User",
-            photoURL: user.photoURL,
+              mappedUser.displayName ||
+              mappedUser.email?.split("@")[0] ||
+              "User",
+            photoURL: mappedUser.photoURL,
             createdAt: new Date().toISOString(),
-          };
-          setUserProfile(fallbackProfile);
+          });
         }
       } else {
+        setUser(null);
+        setUserProfile(null);
+      }
+
+      setLoading(false);
+    };
+
+    initializeAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+
+      if (session?.user) {
+        const mappedUser = mapSupabaseUser(session.user);
+        setUser(mappedUser);
+
+        try {
+          await loadOrCreateProfile(mappedUser);
+        } catch (error) {
+          console.error("Error fetching/creating user profile:", error);
+        }
+      } else {
+        setUser(null);
         setUserProfile(null);
       }
 
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signup = async (
     email: string,
     password: string,
-    displayName: string
+    displayName: string,
   ) => {
-    console.log("Starting signup for:", email);
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
+    const { data, error } = await supabase.auth.signUp({
       email,
-      password
-    );
-    const user = userCredential.user;
+      password,
+      options: {
+        data: {
+          full_name: displayName,
+        },
+      },
+    });
 
-    // Update display name
-    await updateProfile(user, { displayName });
+    if (error) {
+      throw error;
+    }
 
-    // Create user profile in Firestore
-    const profile: UserProfile = {
-      uid: user.uid,
-      email: user.email || "",
-      displayName,
-      photoURL: null,
-      createdAt: new Date().toISOString(),
-    };
-
-    console.log("Creating profile in Firestore:", profile);
-    await setDoc(doc(db, "users", user.uid), profile);
-    setUserProfile(profile);
-    console.log("Signup complete!");
+    if (data.user) {
+      const mappedUser = mapSupabaseUser(data.user);
+      setUser(mappedUser);
+      await loadOrCreateProfile({
+        ...mappedUser,
+        displayName: displayName || mappedUser.displayName,
+      });
+    }
   };
 
   const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw error;
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw error;
+    }
+
     setUser(null);
     setUserProfile(null);
   };
@@ -147,12 +227,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const updateUserProfile = async (displayName: string) => {
     if (!user) return;
 
-    await updateProfile(user, { displayName });
+    const { error: authError } = await supabase.auth.updateUser({
+      data: {
+        full_name: displayName,
+      },
+    });
 
-    const userDocRef = doc(db, "users", user.uid);
-    await setDoc(userDocRef, { displayName }, { merge: true });
+    if (authError) {
+      throw authError;
+    }
+
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: user.uid,
+      email: user.email || "",
+      display_name: displayName,
+      photo_url: user.photoURL,
+      created_at: userProfile?.createdAt || new Date().toISOString(),
+    });
+
+    if (profileError) {
+      throw profileError;
+    }
 
     setUserProfile((prev) => (prev ? { ...prev, displayName } : null));
+    setUser((prev) => (prev ? { ...prev, displayName } : null));
   };
 
   return (

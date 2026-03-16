@@ -6,8 +6,8 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { supabase } from "../lib/supabase";
+import { getReadableSupabaseError } from "../services/productCmsService";
 import { Product } from "../types/types";
 import { useAuth } from "./AuthContext";
 
@@ -55,41 +55,50 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, []);
 
-  // Sync cart and favorites with Firebase when user signs in
+  // Sync cart and favorites with Supabase when user signs in
   useEffect(() => {
-    const syncWithFirebase = async () => {
+    const syncWithSupabase = async () => {
       if (!user || !isHydrated) return;
 
       try {
         // Get local cart and favorites
         const localCart = JSON.parse(
-          localStorage.getItem("whiskerknots-cart") || "[]"
+          localStorage.getItem("whiskerknots-cart") || "[]",
         );
         const localFavorites = JSON.parse(
-          localStorage.getItem("favorites") || "[]"
+          localStorage.getItem("favorites") || "[]",
         );
 
-        // Get Firebase data
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
+        const { data: remoteState, error: readError } = await supabase
+          .from("user_state")
+          .select("cart,favorites")
+          .eq("user_id", user.uid)
+          .single();
 
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const firebaseCart = userData.cart || [];
-          const firebaseFavorites = userData.favorites || [];
+        if (readError && readError.code !== "PGRST116") {
+          throw readError;
+        }
 
-          // Merge local and firebase data (local takes precedence for cart)
+        if (remoteState) {
+          const remoteCart = Array.isArray(remoteState.cart)
+            ? (remoteState.cart as CartItem[])
+            : [];
+          const remoteFavorites = Array.isArray(remoteState.favorites)
+            ? (remoteState.favorites as string[])
+            : [];
+
+          // Merge local and remote data (local takes precedence for cart)
           const mergedCart = [...localCart];
-          firebaseCart.forEach((fbItem: CartItem) => {
-            const exists = mergedCart.find((item) => item.id === fbItem.id);
+          remoteCart.forEach((remoteItem: CartItem) => {
+            const exists = mergedCart.find((item) => item.id === remoteItem.id);
             if (!exists) {
-              mergedCart.push(fbItem);
+              mergedCart.push(remoteItem);
             }
           });
 
           // Merge favorites (remove duplicates)
           const mergedFavorites = [
-            ...new Set([...localFavorites, ...firebaseFavorites]),
+            ...new Set([...localFavorites, ...remoteFavorites]),
           ];
 
           // Update state and localStorage
@@ -97,48 +106,85 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
           localStorage.setItem("whiskerknots-cart", JSON.stringify(mergedCart));
           localStorage.setItem("favorites", JSON.stringify(mergedFavorites));
 
-          // Sync to Firebase
-          await setDoc(
-            userDocRef,
-            {
-              cart: mergedCart,
-              favorites: mergedFavorites,
-            },
-            { merge: true }
-          );
+          const { error: writeError } = await supabase
+            .from("user_state")
+            .upsert(
+              {
+                user_id: user.uid,
+                cart: mergedCart,
+                favorites: mergedFavorites,
+                updated_at: new Date().toISOString(),
+              },
+              {
+                onConflict: "user_id",
+              },
+            );
+
+          if (writeError) {
+            throw writeError;
+          }
 
           // Trigger favorites update event
           window.dispatchEvent(new Event("favoritesChanged"));
         } else {
-          // First time user, save local data to Firebase
-          await setDoc(
-            userDocRef,
-            {
-              cart: localCart,
-              favorites: localFavorites,
-            },
-            { merge: true }
-          );
+          const { error: upsertError } = await supabase
+            .from("user_state")
+            .upsert(
+              {
+                user_id: user.uid,
+                cart: localCart,
+                favorites: localFavorites,
+                updated_at: new Date().toISOString(),
+              },
+              {
+                onConflict: "user_id",
+              },
+            );
+
+          if (upsertError) {
+            throw upsertError;
+          }
         }
       } catch (error) {
-        console.error("Failed to sync with Firebase:", error);
+        console.error(
+          "Failed to sync cart/favorites with Supabase:",
+          getReadableSupabaseError(error),
+          error,
+        );
       }
     };
 
-    syncWithFirebase();
+    syncWithSupabase();
   }, [user, isHydrated]);
 
-  // Save cart to localStorage and Firebase whenever it changes
+  // Save cart to localStorage and Supabase whenever it changes
   useEffect(() => {
     if (isHydrated) {
       localStorage.setItem("whiskerknots-cart", JSON.stringify(items));
 
-      // Sync to Firebase if user is logged in
+      // Sync to Supabase if user is logged in
       if (user) {
-        const userDocRef = doc(db, "users", user.uid);
-        setDoc(userDocRef, { cart: items }, { merge: true }).catch((error) => {
-          console.error("Failed to sync cart to Firebase:", error);
-        });
+        supabase
+          .from("user_state")
+          .upsert(
+            {
+              user_id: user.uid,
+              cart: items,
+              updated_at: new Date().toISOString(),
+            },
+            {
+              onConflict: "user_id",
+            },
+          )
+          .then(({ error }) => {
+            if (error) {
+              console.error(
+                "Failed to sync cart to Supabase:",
+                getReadableSupabaseError(error),
+                error,
+              );
+            }
+          });
       }
     }
   }, [items, isHydrated, user]);
@@ -150,7 +196,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
         return prevItems.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
-            : item
+            : item,
         );
       }
       return [...prevItems, { ...product, quantity }];
@@ -169,8 +215,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
     }
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      )
+        item.id === productId ? { ...item, quantity } : item,
+      ),
     );
   };
 
