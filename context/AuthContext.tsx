@@ -8,6 +8,8 @@ import React, {
 } from "react";
 import { supabase } from "../lib/supabase";
 
+const AUTH_INIT_TIMEOUT_MS = 12_000;
+
 interface AuthUser {
   uid: string;
   email: string | null;
@@ -46,7 +48,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadOrCreateProfile = async (authUser: AuthUser) => {
+  const loadProfile = async (
+    authUser: AuthUser,
+    options?: { createIfMissing?: boolean },
+  ): Promise<boolean> => {
+    const createIfMissing = options?.createIfMissing ?? false;
+
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("id,email,display_name,photo_url,created_at")
@@ -67,7 +74,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       };
 
       setUserProfile(profile);
-      return;
+      return true;
+    }
+
+    if (!createIfMissing) {
+      setUserProfile(null);
+      return false;
     }
 
     const profileToCreate: UserProfile = {
@@ -79,19 +91,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       createdAt: new Date().toISOString(),
     };
 
-    const { error: upsertError } = await supabase.from("profiles").upsert({
-      id: profileToCreate.uid,
-      email: profileToCreate.email,
-      display_name: profileToCreate.displayName,
-      photo_url: profileToCreate.photoURL,
-      created_at: profileToCreate.createdAt,
-    });
+    const { error: upsertError } = await supabase.from("profiles").upsert(
+      {
+        id: profileToCreate.uid,
+        email: profileToCreate.email,
+        display_name: profileToCreate.displayName,
+        photo_url: profileToCreate.photoURL,
+        created_at: profileToCreate.createdAt,
+      },
+      {
+        onConflict: "id",
+      },
+    );
 
     if (upsertError) {
       throw upsertError;
     }
 
+    // Also create initial user_state row so CartContext can sync without RLS issues
+    const { error: userStateError } = await supabase.from("user_state").upsert(
+      {
+        user_id: profileToCreate.uid,
+        cart: [],
+        favorites: [],
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id",
+      },
+    );
+
+    if (userStateError) {
+      console.warn("Failed to create initial user_state row:", userStateError);
+      // Don't throw - profile was created successfully, user_state creation can happen later
+    }
+
     setUserProfile(profileToCreate);
+    return true;
   };
 
   const mapSupabaseUser = (source: {
@@ -110,45 +146,81 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const withAuthTimeout = async <T,>(task: Promise<T>): Promise<T> => {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-      if (!mounted) return;
+      try {
+        return await Promise.race([
+          task,
+          new Promise<T>((_, reject) => {
+            timeoutId = setTimeout(() => {
+              reject(new Error("Authentication initialization timed out."));
+            }, AUTH_INIT_TIMEOUT_MS);
+          }),
+        ]);
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    };
 
-      if (session?.user) {
-        const mappedUser = mapSupabaseUser(session.user);
-        setUser(mappedUser);
-
-        try {
-          await loadOrCreateProfile(mappedUser);
-        } catch (error) {
-          console.error("Error fetching/creating user profile:", error);
-          setUserProfile({
-            uid: mappedUser.uid,
-            email: mappedUser.email || "",
-            displayName:
-              mappedUser.displayName ||
-              mappedUser.email?.split("@")[0] ||
-              "User",
-            photoURL: mappedUser.photoURL,
-            createdAt: new Date().toISOString(),
-          });
-        }
-      } else {
-        setUser(null);
-        setUserProfile(null);
+    const signOutUnavailableBackendAccount = async () => {
+      try {
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.error("Failed to sign out unavailable backend account:", error);
       }
 
-      setLoading(false);
+      if (!mounted) return;
+      setUser(null);
+      setUserProfile(null);
+    };
+
+    const initializeAuth = async () => {
+      try {
+        const {
+          data: { session },
+        } = await withAuthTimeout(supabase.auth.getSession());
+
+        if (!mounted) return;
+
+        if (session?.user) {
+          const mappedUser = mapSupabaseUser(session.user);
+          setUser(mappedUser);
+
+          try {
+            const existsInBackend = await loadProfile(mappedUser, {
+              createIfMissing: false,
+            });
+
+            if (!existsInBackend) {
+              console.warn(
+                "Signed out: authenticated user missing in backend profiles.",
+              );
+              await signOutUnavailableBackendAccount();
+            }
+          } catch (error) {
+            console.error("Error loading backend profile:", error);
+            await signOutUnavailableBackendAccount();
+          }
+        } else {
+          setUser(null);
+          setUserProfile(null);
+        }
+      } catch (error) {
+        console.error("Failed to initialize auth:", error);
+        if (!mounted) return;
+        setUser(null);
+        setUserProfile(null);
+      } finally {
+        if (mounted) setLoading(false);
+      }
     };
 
     initializeAuth();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
       if (session?.user) {
@@ -156,16 +228,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         setUser(mappedUser);
 
         try {
-          await loadOrCreateProfile(mappedUser);
+          // Allow profile creation on signup/signin events (use string comparison)
+          const eventString = String(event);
+          const isNewSession =
+            eventString.includes("SIGNED_UP") ||
+            eventString.includes("SIGNED_IN");
+          const existsInBackend = await loadProfile(mappedUser, {
+            createIfMissing: isNewSession,
+          });
+
+          if (!existsInBackend && !isNewSession) {
+            console.warn(
+              "Signed out: authenticated user missing in backend profiles.",
+            );
+            await supabase.auth.signOut();
+            if (!mounted) return;
+            setUser(null);
+            setUserProfile(null);
+          }
         } catch (error) {
-          console.error("Error fetching/creating user profile:", error);
+          console.error("Error loading backend profile:", error);
+          await supabase.auth.signOut();
+          if (!mounted) return;
+          setUser(null);
+          setUserProfile(null);
         }
       } else {
         setUser(null);
         setUserProfile(null);
       }
 
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
     return () => {
@@ -179,7 +272,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     password: string,
     displayName: string,
   ) => {
-    const { data, error } = await supabase.auth.signUp({
+    const { error: signupError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -189,18 +282,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       },
     });
 
-    if (error) {
-      throw error;
+    if (signupError) {
+      throw signupError;
     }
 
-    if (data.user) {
-      const mappedUser = mapSupabaseUser(data.user);
-      setUser(mappedUser);
-      await loadOrCreateProfile({
-        ...mappedUser,
-        displayName: displayName || mappedUser.displayName,
-      });
-    }
+    // Profile creation is now handled by onAuthStateChange when SIGNED_UP event fires
   };
 
   const login = async (email: string, password: string) => {

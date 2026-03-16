@@ -57,9 +57,22 @@ function SignupPage() {
       await signup(formData.email, formData.password, formData.displayName);
       router.push("/");
     } catch (err: unknown) {
-      const error = err as { code?: string; message?: string; status?: number };
-      const message = (error.message || "").toLowerCase();
-      console.error("Signup error:", err);
+      let errorMessage = "Failed to create account. Please try again";
+
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === "object" && err !== null) {
+        const errorObj = err as {
+          code?: string;
+          message?: string;
+          status?: number;
+        };
+        errorMessage = errorObj.message || JSON.stringify(err);
+      }
+
+      const message = (errorMessage || "").toLowerCase();
+      console.error("Signup error:", errorMessage, err);
+
       if (
         message.includes("already registered") ||
         message.includes("already been registered")
@@ -69,10 +82,24 @@ function SignupPage() {
         setError("Invalid email address");
       } else if (message.includes("password") && message.includes("weak")) {
         setError("Password is too weak");
-      } else if (error.status === 429) {
-        setError("Too many requests. Please try again shortly");
+      } else if (
+        message.includes("violates row-level security") ||
+        message.includes("42501")
+      ) {
+        setError(
+          "Error creating account. Please try again or contact support.",
+        );
+      } else if (typeof err === "object" && err !== null && "status" in err) {
+        const status = (err as { status?: number }).status;
+        if (status === 429) {
+          setError("Too many requests. Please try again shortly");
+        } else {
+          setError(
+            errorMessage || "Failed to create account. Please try again",
+          );
+        }
       } else {
-        setError("Failed to create account. Please try again");
+        setError(errorMessage || "Failed to create account. Please try again");
       }
     } finally {
       setIsLoading(false);

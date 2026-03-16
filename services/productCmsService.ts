@@ -27,6 +27,7 @@ export const getReadableSupabaseError = getReadableCmsError;
 
 const PRODUCTS_CACHE_TTL_MS = 15_000;
 const CATEGORIES_CACHE_TTL_MS = 60_000;
+const QUERY_TIMEOUT_MS = 12_000;
 const RETRYABLE_ERROR_SUBSTRINGS = [
   "lock broken by another request",
   "request was aborted",
@@ -41,6 +42,26 @@ let categoriesRequest: Promise<Category[]> | null = null;
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const withTimeout = async <T>(
+  task: Promise<T>,
+  timeoutMs = QUERY_TIMEOUT_MS,
+): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      task,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`Request timeout after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
 
 const isCacheFresh = (timestamp: number, ttlMs: number) =>
   Date.now() - timestamp < ttlMs;
@@ -234,12 +255,14 @@ export const fetchProducts = async (options?: {
   if (productsRequest) return productsRequest;
 
   productsRequest = withRetry(async () => {
-    const { data, error } = await supabase
-      .from("products")
-      .select(PRODUCT_SELECT)
-      .eq("status", "active")
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false });
+    const { data, error } = await withTimeout(
+      supabase
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .eq("status", "active")
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: false }),
+    );
 
     if (error) throw error;
 
@@ -258,12 +281,14 @@ export const fetchProducts = async (options?: {
 export const fetchProductBySlug = async (
   slug: string,
 ): Promise<Product | null> => {
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT_WITH_VARIANTS)
-    .eq("status", "active")
-    .eq("slug", slug)
-    .single();
+  const { data, error } = await withTimeout(
+    supabase
+      .from("products")
+      .select(PRODUCT_SELECT_WITH_VARIANTS)
+      .eq("status", "active")
+      .eq("slug", slug)
+      .single(),
+  );
 
   if (error) {
     if (error.code === "PGRST116") return null;
@@ -283,12 +308,14 @@ export const fetchCategories = async (): Promise<Category[]> => {
   if (categoriesRequest) return categoriesRequest;
 
   categoriesRequest = withRetry(async () => {
-    const { data, error } = await supabase
-      .from("categories")
-      .select("*")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true });
+    const { data, error } = await withTimeout(
+      supabase
+        .from("categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
+    );
 
     if (error) throw error;
 
@@ -372,11 +399,13 @@ export const subscribeToProducts = (
 
 /** Fetch ALL products (all statuses) for the admin panel */
 export const adminFetchProducts = async (): Promise<Product[]> => {
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
+  const { data, error } = await withTimeout(
+    supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+  );
 
   if (error) throw error;
   return (data ?? []).map(rowToProduct);
@@ -386,11 +415,13 @@ export const adminFetchProducts = async (): Promise<Product[]> => {
 export const adminFetchProduct = async (
   id: string,
 ): Promise<Product | null> => {
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT_WITH_VARIANTS)
-    .eq("id", id)
-    .single();
+  const { data, error } = await withTimeout(
+    supabase
+      .from("products")
+      .select(PRODUCT_SELECT_WITH_VARIANTS)
+      .eq("id", id)
+      .single(),
+  );
 
   if (error) {
     if (error.code === "PGRST116") return null;
@@ -401,11 +432,13 @@ export const adminFetchProduct = async (
 
 /** Fetch ALL categories for the admin panel */
 export const adminFetchCategories = async (): Promise<Category[]> => {
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true });
+  const { data, error } = await withTimeout(
+    supabase
+      .from("categories")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+  );
 
   if (error) throw error;
   return (data ?? []).map(rowToCategory);

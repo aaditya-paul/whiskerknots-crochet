@@ -25,6 +25,11 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    const loadingWatchdog = setTimeout(() => {
+      if (!isMounted) return;
+      setError("Loading products took too long. Please refresh.");
+      setLoading(false);
+    }, 15_000);
 
     fetchCategories()
       .then((loadedCategories) => {
@@ -56,6 +61,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false;
+      clearTimeout(loadingWatchdog);
       unsubscribe();
     };
   }, []);

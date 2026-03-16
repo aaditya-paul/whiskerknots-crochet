@@ -61,6 +61,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
       if (!user || !isHydrated) return;
 
       try {
+        // Small delay to allow session to fully initialize after signup
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         // Get local cart and favorites
         const localCart = JSON.parse(
           localStorage.getItem("whiskerknots-cart") || "[]",
@@ -75,8 +78,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
           .eq("user_id", user.uid)
           .single();
 
+        // If no existing row, that's OK - we'll create one below
         if (readError && readError.code !== "PGRST116") {
-          throw readError;
+          // PGRST116 = row not found (expected for new users after signup)
+          console.error(
+            "Error reading user_state:",
+            getReadableSupabaseError(readError),
+          );
+          // Don't throw - gracefully fall back to upsert which will create the row
         }
 
         if (remoteState) {
@@ -121,12 +130,17 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
             );
 
           if (writeError) {
+            console.error(
+              "Error upserting merged state:",
+              getReadableSupabaseError(writeError),
+            );
             throw writeError;
           }
 
           // Trigger favorites update event
           window.dispatchEvent(new Event("favoritesChanged"));
         } else {
+          // No remote row - create one with local data
           const { error: upsertError } = await supabase
             .from("user_state")
             .upsert(
@@ -142,15 +156,26 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
             );
 
           if (upsertError) {
+            console.error(
+              "Error creating initial user_state:",
+              getReadableSupabaseError(upsertError),
+            );
             throw upsertError;
           }
         }
       } catch (error) {
-        console.error(
-          "Failed to sync cart/favorites with Supabase:",
-          getReadableSupabaseError(error),
-          error,
-        );
+        const errorMsg = getReadableSupabaseError(error);
+        if (
+          typeof errorMsg === "string" &&
+          errorMsg.includes("row-level security")
+        ) {
+          console.warn(
+            "Session may not be fully initialized. Cart sync will retry on next update.",
+            error,
+          );
+        } else {
+          console.error("Failed to sync cart/favorites with Supabase:", error);
+        }
       }
     };
 

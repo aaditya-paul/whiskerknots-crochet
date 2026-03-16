@@ -19,7 +19,6 @@ import {
   getReadableCmsError,
 } from "@/services/productCmsService";
 import { Product, Category } from "@/types/types";
-import { useRouter } from "next/navigation";
 
 function StatCard({
   label,
@@ -52,7 +51,6 @@ export default function AdminDashboard() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
   useEffect(() => {
     Promise.all([adminFetchProducts(), adminFetchCategories()])
       .then(([prods, cats]) => {
@@ -61,7 +59,7 @@ export default function AdminDashboard() {
       })
       .catch((err) => setError(getReadableCmsError(err)))
       .finally(() => setLoading(false));
-  }, [router]);
+  }, []);
 
   const active = products.filter((p) => p.status === "active").length;
   const drafts = products.filter((p) => p.status === "draft").length;
