@@ -149,6 +149,8 @@ CREATE TABLE IF NOT EXISTS public.user_state (
 CREATE OR REPLACE FUNCTION public._update_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   NEW.updated_at = now();
@@ -161,6 +163,8 @@ $$;
 CREATE OR REPLACE FUNCTION public._set_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   NEW.updated_at = now();
@@ -172,6 +176,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.prevent_deleting_last_category()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   IF (SELECT COUNT(*) FROM public.categories WHERE id <> OLD.id) = 0 THEN
@@ -185,6 +191,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.enforce_max_product_images()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   existing_count integer;

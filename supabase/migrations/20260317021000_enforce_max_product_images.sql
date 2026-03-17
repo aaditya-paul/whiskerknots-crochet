@@ -4,6 +4,8 @@
 CREATE OR REPLACE FUNCTION public.enforce_max_product_images()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   existing_count integer;

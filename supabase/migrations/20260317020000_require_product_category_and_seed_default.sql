@@ -43,6 +43,8 @@ ALTER TABLE public.products
 CREATE OR REPLACE FUNCTION public.prevent_deleting_last_category()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   IF (SELECT COUNT(*) FROM public.categories WHERE id <> OLD.id) = 0 THEN

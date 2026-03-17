@@ -103,7 +103,10 @@ CREATE TABLE IF NOT EXISTS product_variants (
 
 -- ─── AUTO-UPDATE updated_at ───────────────────────────────
 CREATE OR REPLACE FUNCTION _update_updated_at()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
+RETURNS TRIGGER LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;

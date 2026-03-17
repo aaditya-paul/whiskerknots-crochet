@@ -26,6 +26,8 @@ alter table public.user_state add column if not exists updated_at timestamptz no
 create or replace function public._set_updated_at()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   new.updated_at = now();
