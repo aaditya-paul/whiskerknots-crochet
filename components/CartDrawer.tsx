@@ -113,7 +113,7 @@ const CartDrawer: React.FC = () => {
                     {/* Image */}
                     <div className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
                       <Image
-                        src={item.image}
+                        src={item.image || "https://picsum.photos/seed/cart-item/80/80"}
                         alt={item.name}
                         width={80}
                         height={80}
@@ -127,7 +127,7 @@ const CartDrawer: React.FC = () => {
                         {item.name}
                       </h4>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        {item.category}
+                        {item.category?.name || "Uncategorized"}
                       </p>
                       <p className="text-lg font-bold text-rose-400">
                         ₹{item.price.toFixed(2)}

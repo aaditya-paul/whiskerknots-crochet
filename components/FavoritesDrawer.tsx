@@ -145,7 +145,10 @@ const FavoritesDrawer: React.FC = () => {
                             className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 cursor-pointer"
                           >
                             <Image
-                              src={product.image}
+                              src={
+                                product.image ||
+                                "https://picsum.photos/seed/favorite-item/96/96"
+                              }
                               alt={product.name}
                               width={96}
                               height={96}

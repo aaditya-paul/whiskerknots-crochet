@@ -25,11 +25,18 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let watchdogActive = true;
+    const stopWatchdog = () => {
+      watchdogActive = false;
+      clearTimeout(loadingWatchdog);
+    };
+
     const loadingWatchdog = setTimeout(() => {
       if (!isMounted) return;
+      if (!watchdogActive) return;
       setError("Loading products took too long. Please refresh.");
       setLoading(false);
-    }, 15_000);
+    }, 45_000);
 
     fetchCategories()
       .then((loadedCategories) => {
@@ -42,6 +49,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = subscribeToProducts(
       (cmsProducts) => {
         if (!isMounted) return;
+        stopWatchdog();
         setProducts(cmsProducts);
         setError(null);
         setLoading(false);
@@ -53,6 +61,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
           console.warn("Realtime unavailable:", readable);
           return;
         }
+        stopWatchdog();
         console.error("Failed to load products:", readable);
         setError(readable);
         setLoading(false);
@@ -61,7 +70,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false;
-      clearTimeout(loadingWatchdog);
+      stopWatchdog();
       unsubscribe();
     };
   }, []);

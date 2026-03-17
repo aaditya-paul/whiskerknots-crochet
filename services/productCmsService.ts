@@ -289,6 +289,8 @@ const rowToCategory = (row: any): Category => ({
 export const fetchProducts = async (options?: {
   forceRefresh?: boolean;
 }): Promise<Product[]> => {
+  const staleProducts = productsCache?.data ?? null;
+
   if (
     !options?.forceRefresh &&
     productsCache &&
@@ -317,6 +319,14 @@ export const fetchProducts = async (options?: {
   }).catch((err) => {
     // Immediately clear singleton so subsequent calls can retry
     productsRequest = null;
+    if (staleProducts) {
+      productsCache = {
+        data: staleProducts,
+        // Mark stale to force a fresh retry on the next call.
+        timestamp: 0,
+      };
+      return staleProducts;
+    }
     productsCache = null;
     throw err;
   });

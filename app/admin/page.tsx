@@ -192,7 +192,7 @@ export default function AdminDashboard() {
                         {p.name}
                       </p>
                       <p className="text-xs text-gray-400">
-                        ?{p.price.toFixed(2)}
+                        ₹{p.price.toFixed(2)}
                       </p>
                     </div>
                     <span
