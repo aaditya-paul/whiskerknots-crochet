@@ -17,7 +17,7 @@ import {
   adminFetchProducts,
   adminFetchCategories,
   getReadableCmsError,
-} from "@/services/productCmsService";
+} from "@/services/adminDb";
 import { Product, Category } from "@/types/types";
 
 function StatCard({

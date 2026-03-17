@@ -22,7 +22,7 @@ import {
   adminDeleteProduct,
   adminUpdateProduct,
   getReadableCmsError,
-} from "@/services/productCmsService";
+} from "@/services/adminDb";
 import { Product, Category, ProductStatus } from "@/types/types";
 
 const STATUS_LABELS: Record<ProductStatus | "all", string> = {

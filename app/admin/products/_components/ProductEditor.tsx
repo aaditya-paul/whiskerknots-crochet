@@ -45,7 +45,7 @@ import {
   adminFetchProduct,
   getReadableCmsError,
   ProductWriteData,
-} from "@/services/productCmsService";
+} from "@/services/adminDb";
 import { Category, Product, ProductStatus } from "@/types/types";
 import ProductCard from "@/components/ProductCard";
 import ProductDetailView from "@/components/ProductDetailView";

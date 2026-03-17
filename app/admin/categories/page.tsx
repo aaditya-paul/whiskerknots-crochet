@@ -19,7 +19,7 @@ import {
   adminDeleteCategory,
   CategoryWriteData,
   getReadableCmsError,
-} from "@/services/productCmsService";
+} from "@/services/adminDb";
 import { Category } from "@/types/types";
 import { slugify } from "@/utils/slugify";
 
