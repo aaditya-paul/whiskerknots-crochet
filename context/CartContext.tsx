@@ -4,6 +4,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useRef,
   ReactNode,
 } from "react";
 import { supabase } from "../lib/supabase";
@@ -37,6 +38,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const isInitialRemoteSyncInFlightRef = useRef(false);
+  const hasCompletedInitialRemoteSyncRef = useRef(false);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -58,7 +61,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
   // Sync cart and favorites with Supabase when user signs in
   useEffect(() => {
     const syncWithSupabase = async () => {
-      if (!user || !isHydrated) return;
+      if (!user || !isHydrated || isInitialRemoteSyncInFlightRef.current) {
+        return;
+      }
+
+      isInitialRemoteSyncInFlightRef.current = true;
+      hasCompletedInitialRemoteSyncRef.current = false;
 
       try {
         // Small delay to allow session to fully initialize after signup
@@ -176,10 +184,18 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
         } else {
           console.error("Failed to sync cart/favorites with Supabase:", error);
         }
+      } finally {
+        isInitialRemoteSyncInFlightRef.current = false;
+        hasCompletedInitialRemoteSyncRef.current = true;
       }
     };
 
     syncWithSupabase();
+
+    if (!user) {
+      isInitialRemoteSyncInFlightRef.current = false;
+      hasCompletedInitialRemoteSyncRef.current = false;
+    }
   }, [user, isHydrated]);
 
   // Save cart to localStorage and Supabase whenever it changes
@@ -188,7 +204,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
       localStorage.setItem("whiskerknots-cart", JSON.stringify(items));
 
       // Sync to Supabase if user is logged in
-      if (user) {
+      if (
+        user &&
+        hasCompletedInitialRemoteSyncRef.current &&
+        !isInitialRemoteSyncInFlightRef.current
+      ) {
         supabase
           .from("user_state")
           .upsert(

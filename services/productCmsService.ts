@@ -28,11 +28,18 @@ export const getReadableSupabaseError = getReadableCmsError;
 const PRODUCTS_CACHE_TTL_MS = 15_000;
 const CATEGORIES_CACHE_TTL_MS = 60_000;
 const QUERY_TIMEOUT_MS = 12_000;
+const UPLOAD_TIMEOUT_MS = 60_000;
 const RETRYABLE_ERROR_SUBSTRINGS = [
   "lock broken by another request",
   "request was aborted",
   "aborterror",
   "timeout",
+];
+
+const JWT_FUTURE_ERROR_SUBSTRINGS = [
+  "jwt issued at future",
+  "[pgrst303]",
+  "pgrst303",
 ];
 
 let productsCache: { data: Product[]; timestamp: number } | null = null;
@@ -44,14 +51,14 @@ const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const withTimeout = async <T>(
-  task: Promise<T>,
+  task: PromiseLike<T>,
   timeoutMs = QUERY_TIMEOUT_MS,
 ): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   try {
     return await Promise.race([
-      task,
+      Promise.resolve(task),
       new Promise<T>((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(new Error(`Request timeout after ${timeoutMs}ms`));
@@ -71,14 +78,52 @@ const isRetryableCmsError = (error: unknown) => {
   return RETRYABLE_ERROR_SUBSTRINGS.some((token) => readable.includes(token));
 };
 
+const isJwtIssuedAtFutureError = (error: unknown) => {
+  const readable = getReadableCmsError(error).toLowerCase();
+  return JWT_FUTURE_ERROR_SUBSTRINGS.some((token) => readable.includes(token));
+};
+
+const clearLocalSupabaseSession = async () => {
+  if (typeof window === "undefined") return;
+
+  try {
+    // Clear stale browser token/session that can trigger PGRST303.
+    await supabase.auth.signOut({ scope: "local" });
+  } catch {
+    // Best-effort cleanup; keep fallback localStorage cleanup below.
+  }
+
+  try {
+    const storageKeys: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key) storageKeys.push(key);
+    }
+
+    storageKeys
+      .filter((key) => key.startsWith("sb-") && key.endsWith("-auth-token"))
+      .forEach((key) => window.localStorage.removeItem(key));
+  } catch {
+    // localStorage may be unavailable in strict/private contexts
+  }
+};
+
 const withRetry = async <T>(task: () => Promise<T>, retries = 2) => {
   let lastError: unknown;
+  let jwtSessionCleared = false;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
       return await task();
     } catch (error) {
       lastError = error;
+
+      if (isJwtIssuedAtFutureError(error) && !jwtSessionCleared) {
+        jwtSessionCleared = true;
+        await clearLocalSupabaseSession();
+        continue;
+      }
+
       if (attempt === retries || !isRetryableCmsError(error)) {
         throw error;
       }
@@ -269,6 +314,11 @@ export const fetchProducts = async (options?: {
     const mappedProducts = (data ?? []).map(rowToProduct);
     productsCache = { data: mappedProducts, timestamp: Date.now() };
     return mappedProducts;
+  }).catch((err) => {
+    // Immediately clear singleton so subsequent calls can retry
+    productsRequest = null;
+    productsCache = null;
+    throw err;
   });
 
   try {
@@ -322,6 +372,11 @@ export const fetchCategories = async (): Promise<Category[]> => {
     const mappedCategories = (data ?? []).map(rowToCategory);
     categoriesCache = { data: mappedCategories, timestamp: Date.now() };
     return mappedCategories;
+  }).catch((err) => {
+    // Immediately clear singleton so subsequent calls can retry
+    categoriesRequest = null;
+    categoriesCache = null;
+    throw err;
   });
 
   try {
@@ -331,39 +386,28 @@ export const fetchCategories = async (): Promise<Category[]> => {
   }
 };
 
-/** Realtime subscription – calls onData whenever products change */
+// Poll interval for product list refresh (no realtime WebSocket needed).
+// A persistent WebSocket channel caused idle-hang issues: each reconnect
+// attempt after the Realtime service restarted consumed a browser HTTP
+// connection slot on the shared 127.0.0.1:54321 origin, starving REST and
+// Storage calls. Polling every 30s is sufficient for a single-operator CMS.
+const PRODUCTS_POLL_INTERVAL_MS = 30_000;
+
+/** Polls for product changes and calls onData whenever the list updates */
 export const subscribeToProducts = (
   onData: (products: Product[]) => void,
   onError?: (err: unknown, source: "fetch" | "realtime") => void,
 ) => {
-  let channel: ReturnType<typeof supabase.channel> | null = null;
   let isActive = true;
   let isLoading = false;
-  let reloadRequested = false;
-  const topic = `products-rt-${Math.random().toString(36).slice(2)}`;
 
   const load = async (forceRefresh = false) => {
-    if (isLoading) {
-      reloadRequested = reloadRequested || forceRefresh;
-      return;
-    }
-
+    if (!isActive || isLoading) return;
     isLoading = true;
-
     try {
-      let shouldForceRefresh = forceRefresh;
-
-      do {
-        reloadRequested = false;
-
-        const products = await fetchProducts({
-          forceRefresh: shouldForceRefresh,
-        });
-        if (!isActive) return;
-
-        onData(products);
-        shouldForceRefresh = reloadRequested;
-      } while (shouldForceRefresh);
+      const products = await fetchProducts({ forceRefresh });
+      if (!isActive) return;
+      onData(products);
     } catch (err) {
       if (isActive) onError?.(err, "fetch");
     } finally {
@@ -373,25 +417,14 @@ export const subscribeToProducts = (
 
   void load();
 
-  channel = supabase
-    .channel(topic)
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "products" },
-      () => {
-        invalidateProductsCache();
-        void load(true);
-      },
-    )
-    .subscribe((status, err) => {
-      if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT") && onError) {
-        onError(err ?? new Error(`Realtime status: ${status}`), "realtime");
-      }
-    });
+  const intervalId = setInterval(() => {
+    invalidateProductsCache();
+    void load(true);
+  }, PRODUCTS_POLL_INTERVAL_MS);
 
   return () => {
     isActive = false;
-    if (channel) supabase.removeChannel(channel);
+    clearInterval(intervalId);
   };
 };
 
@@ -399,12 +432,14 @@ export const subscribeToProducts = (
 
 /** Fetch ALL products (all statuses) for the admin panel */
 export const adminFetchProducts = async (): Promise<Product[]> => {
-  const { data, error } = await withTimeout(
-    supabase
-      .from("products")
-      .select(PRODUCT_SELECT)
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false }),
+  const { data, error } = await withRetry(() =>
+    withTimeout(
+      supabase
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: false }),
+    ),
   );
 
   if (error) throw error;
@@ -415,12 +450,14 @@ export const adminFetchProducts = async (): Promise<Product[]> => {
 export const adminFetchProduct = async (
   id: string,
 ): Promise<Product | null> => {
-  const { data, error } = await withTimeout(
-    supabase
-      .from("products")
-      .select(PRODUCT_SELECT_WITH_VARIANTS)
-      .eq("id", id)
-      .single(),
+  const { data, error } = await withRetry(() =>
+    withTimeout(
+      supabase
+        .from("products")
+        .select(PRODUCT_SELECT_WITH_VARIANTS)
+        .eq("id", id)
+        .single(),
+    ),
   );
 
   if (error) {
@@ -432,12 +469,14 @@ export const adminFetchProduct = async (
 
 /** Fetch ALL categories for the admin panel */
 export const adminFetchCategories = async (): Promise<Category[]> => {
-  const { data, error } = await withTimeout(
-    supabase
-      .from("categories")
-      .select("*")
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true }),
+  const { data, error } = await withRetry(() =>
+    withTimeout(
+      supabase
+        .from("categories")
+        .select("*")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
+    ),
   );
 
   if (error) throw error;
@@ -512,33 +551,38 @@ const productWritePayload = (d: ProductWriteData) => ({
 
 export const adminCreateProduct = async (
   data: ProductWriteData,
+  preGeneratedId?: string,
 ): Promise<string> => {
-  const { data: row, error } = await supabase
-    .from("products")
-    .insert(productWritePayload(data))
-    .select("id")
-    .single();
-
-  if (error) throw error;
-  invalidateProductsCache();
-  return row.id;
+  const payload = productWritePayload(data);
+  if (preGeneratedId) (payload as Record<string, unknown>).id = preGeneratedId;
+  return withRetry(async () => {
+    const { data: row, error } = await withTimeout(
+      supabase.from("products").insert(payload).select("id").single(),
+    );
+    if (error) throw error;
+    invalidateProductsCache();
+    return row.id as string;
+  });
 };
 
 export const adminUpdateProduct = async (
   id: string,
   data: ProductWriteData,
 ): Promise<void> => {
-  const { error } = await supabase
-    .from("products")
-    .update(productWritePayload(data))
-    .eq("id", id);
-
-  if (error) throw error;
-  invalidateProductsCache();
+  return withRetry(async () => {
+    const { error } = await withTimeout(
+      supabase.from("products").update(productWritePayload(data)).eq("id", id),
+    );
+    if (error) throw error;
+    invalidateProductsCache();
+  });
 };
 
 export const adminDeleteProduct = async (id: string): Promise<void> => {
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  const { error } = await withTimeout(
+    supabase.from("products").delete().eq("id", id),
+  );
+
   if (error) throw error;
   invalidateProductsCache();
 };
@@ -572,11 +616,13 @@ const categoryWritePayload = (d: CategoryWriteData) => ({
 export const adminCreateCategory = async (
   data: CategoryWriteData,
 ): Promise<string> => {
-  const { data: row, error } = await supabase
-    .from("categories")
-    .insert(categoryWritePayload(data))
-    .select("id")
-    .single();
+  const { data: row, error } = await withTimeout(
+    supabase
+      .from("categories")
+      .insert(categoryWritePayload(data))
+      .select("id")
+      .single(),
+  );
 
   if (error) throw error;
   invalidateStorefrontCache();
@@ -587,17 +633,19 @@ export const adminUpdateCategory = async (
   id: string,
   data: CategoryWriteData,
 ): Promise<void> => {
-  const { error } = await supabase
-    .from("categories")
-    .update(categoryWritePayload(data))
-    .eq("id", id);
+  const { error } = await withTimeout(
+    supabase.from("categories").update(categoryWritePayload(data)).eq("id", id),
+  );
 
   if (error) throw error;
   invalidateStorefrontCache();
 };
 
 export const adminDeleteCategory = async (id: string): Promise<void> => {
-  const { error } = await supabase.from("categories").delete().eq("id", id);
+  const { error } = await withTimeout(
+    supabase.from("categories").delete().eq("id", id),
+  );
+
   if (error) throw error;
   invalidateStorefrontCache();
 };
@@ -613,12 +661,13 @@ export const adminUploadImage = async (
   const ext = file.name.split(".").pop() ?? "jpg";
   const storagePath = `products/${productId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
 
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, file, {
+  const { error } = await withTimeout(
+    supabase.storage.from(BUCKET).upload(storagePath, file, {
       contentType: file.type,
       upsert: false,
-    });
+    }),
+    UPLOAD_TIMEOUT_MS,
+  );
   if (error) throw error;
 
   const { data: urlData } = supabase.storage
@@ -630,7 +679,10 @@ export const adminUploadImage = async (
 export const adminDeleteImageFromStorage = async (
   storagePath: string,
 ): Promise<void> => {
-  const { error } = await supabase.storage.from(BUCKET).remove([storagePath]);
+  const { error } = await withTimeout(
+    supabase.storage.from(BUCKET).remove([storagePath]),
+  );
+
   if (error) throw error;
 };
 
@@ -646,30 +698,34 @@ export const adminSyncProductImages = async (
   productId: string,
   images: (ImageWriteData & { id?: string })[],
 ): Promise<void> => {
-  // Delete all existing images then re-insert to keep it simple & ordered
-  const { error: delError } = await supabase
-    .from("product_images")
-    .delete()
-    .eq("product_id", productId);
-  if (delError) throw delError;
+  // Delete all existing images then re-insert to keep ordering simple.
+  // Wrapped in retry so a transient lock error doesn't orphan images.
+  return withRetry(async () => {
+    const { error: delError } = await withTimeout(
+      supabase.from("product_images").delete().eq("product_id", productId),
+    );
+    if (delError) throw delError;
 
-  if (images.length === 0) {
+    if (images.length === 0) {
+      invalidateProductsCache();
+      return;
+    }
+
+    const rows = images.map((img, i) => ({
+      product_id: productId,
+      url: img.url,
+      storage_path: img.storagePath ?? null,
+      alt: img.alt,
+      is_thumbnail: img.isThumbnail,
+      sort_order: i,
+    }));
+
+    const { error } = await withTimeout(
+      supabase.from("product_images").insert(rows),
+    );
+    if (error) throw error;
     invalidateProductsCache();
-    return;
-  }
-
-  const rows = images.map((img, i) => ({
-    product_id: productId,
-    url: img.url,
-    storage_path: img.storagePath ?? null,
-    alt: img.alt,
-    is_thumbnail: img.isThumbnail,
-    sort_order: i,
-  }));
-
-  const { error } = await supabase.from("product_images").insert(rows);
-  if (error) throw error;
-  invalidateProductsCache();
+  });
 };
 
 // ── Variant management ──
@@ -690,33 +746,36 @@ export const adminSyncProductVariants = async (
   productId: string,
   variants: VariantWriteData[],
 ): Promise<void> => {
-  const { error: delError } = await supabase
-    .from("product_variants")
-    .delete()
-    .eq("product_id", productId);
-  if (delError) throw delError;
+  return withRetry(async () => {
+    const { error: delError } = await withTimeout(
+      supabase.from("product_variants").delete().eq("product_id", productId),
+    );
+    if (delError) throw delError;
 
-  if (variants.length === 0) {
+    if (variants.length === 0) {
+      invalidateProductsCache();
+      return;
+    }
+
+    const rows = variants.map((v, i) => ({
+      product_id: productId,
+      name: v.name,
+      sku: v.sku ?? null,
+      price: v.price ?? null,
+      compare_at_price: v.compareAtPrice ?? null,
+      quantity: v.quantity ?? null,
+      in_stock: v.inStock,
+      image_url: v.imageUrl ?? null,
+      attributes: v.attributes,
+      sort_order: i,
+    }));
+
+    const { error } = await withTimeout(
+      supabase.from("product_variants").insert(rows),
+    );
+    if (error) throw error;
     invalidateProductsCache();
-    return;
-  }
-
-  const rows = variants.map((v, i) => ({
-    product_id: productId,
-    name: v.name,
-    sku: v.sku ?? null,
-    price: v.price ?? null,
-    compare_at_price: v.compareAtPrice ?? null,
-    quantity: v.quantity ?? null,
-    in_stock: v.inStock,
-    image_url: v.imageUrl ?? null,
-    attributes: v.attributes,
-    sort_order: i,
-  }));
-
-  const { error } = await supabase.from("product_variants").insert(rows);
-  if (error) throw error;
-  invalidateProductsCache();
+  });
 };
 
 // ─── Legacy / compat exports ──────────────────────────────────────────────────

@@ -146,22 +146,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     let mounted = true;
 
-    const withAuthTimeout = async <T,>(task: Promise<T>): Promise<T> => {
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-      try {
-        return await Promise.race([
-          task,
-          new Promise<T>((_, reject) => {
-            timeoutId = setTimeout(() => {
-              reject(new Error("Authentication initialization timed out."));
-            }, AUTH_INIT_TIMEOUT_MS);
-          }),
-        ]);
-      } finally {
-        if (timeoutId) clearTimeout(timeoutId);
-      }
-    };
+    // Safety-net: if auth init takes too long, stop showing the loading state.
+    // This does NOT abort the underlying getSession() — GoTrue's internal state
+    // machine continues running to completion so the singleton client stays healthy.
+    const loadingWatchdog = setTimeout(() => {
+      if (!mounted) return;
+      console.warn("Auth initialization is taking longer than expected.");
+      setLoading(false);
+    }, AUTH_INIT_TIMEOUT_MS);
 
     const signOutUnavailableBackendAccount = async () => {
       try {
@@ -179,7 +171,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const {
           data: { session },
-        } = await withAuthTimeout(supabase.auth.getSession());
+        } = await supabase.auth.getSession();
 
         if (!mounted) return;
 
@@ -212,7 +204,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         setUser(null);
         setUserProfile(null);
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          clearTimeout(loadingWatchdog);
+          setLoading(false);
+        }
       }
     };
 
@@ -263,6 +258,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     return () => {
       mounted = false;
+      clearTimeout(loadingWatchdog);
       subscription.unsubscribe();
     };
   }, []);

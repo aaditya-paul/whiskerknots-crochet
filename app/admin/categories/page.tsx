@@ -21,6 +21,7 @@ import {
   getReadableCmsError,
 } from "@/services/productCmsService";
 import { Category } from "@/types/types";
+import { slugify } from "@/utils/slugify";
 
 // ─── Empty form state ─────────────────────────────────────────────────────────
 
@@ -35,13 +36,6 @@ const EMPTY_FORM: CategoryWriteData = {
   seoTitle: "",
   seoDescription: "",
 };
-
-const slugify = (v: string) =>
-  v
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 
 // ─── Inline category form ─────────────────────────────────────────────────────
 
@@ -71,11 +65,18 @@ function CategoryForm({
   useEffect(() => {
     if (!isNew) return;
     if (form.name !== prevNameRef.current) {
+      const previousAutoSlug = slugify(prevNameRef.current);
       prevNameRef.current = form.name as string;
-      setForm((prev) => ({
-        ...prev,
-        slug: slugify((form.name as string) ?? ""),
-      }));
+      setForm((prev) => {
+        if (prev.slug && prev.slug !== previousAutoSlug) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          slug: slugify((form.name as string) ?? ""),
+        };
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.name]);

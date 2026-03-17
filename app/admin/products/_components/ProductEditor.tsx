@@ -50,10 +50,12 @@ import { Category, Product, ProductStatus } from "@/types/types";
 import ProductCard from "@/components/ProductCard";
 import ProductDetailView from "@/components/ProductDetailView";
 import { getProductGalleryImages } from "@/utils/productImages";
+import { slugify } from "@/utils/slugify";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type ImageDraft = {
+  clientId: string;
   /** undefined = not yet persisted */
   id?: string;
   url: string;
@@ -141,19 +143,19 @@ const EMPTY_FORM: FormState = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const slugify = (v: string) =>
-  v
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
 const parseMoney = (v: string) => {
   const n = parseFloat(v);
   return isNaN(n) ? undefined : n;
 };
 
 const MAX_PRODUCT_IMAGES = 5;
+
+const makeImageClientId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `img-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -234,18 +236,20 @@ function ImageManager({
   const [urlAlt, setUrlAlt] = useState("");
 
   const uploadFile = useCallback(
-    async (file: File, idx: number) => {
+    async (file: File, clientId: string) => {
       const tempId = productId ?? `tmp-${Date.now()}`;
       try {
         onChange((prev) =>
-          prev.map((img, i) =>
-            i === idx ? { ...img, uploading: true, error: undefined } : img,
+          prev.map((img) =>
+            img.clientId === clientId
+              ? { ...img, uploading: true, error: undefined }
+              : img,
           ),
         );
         const { url, storagePath } = await adminUploadImage(file, tempId);
         onChange((prev) =>
-          prev.map((img, i) =>
-            i === idx
+          prev.map((img) =>
+            img.clientId === clientId
               ? {
                   ...img,
                   url,
@@ -258,8 +262,8 @@ function ImageManager({
         );
       } catch (err) {
         onChange((prev) =>
-          prev.map((img, i) =>
-            i === idx
+          prev.map((img) =>
+            img.clientId === clientId
               ? { ...img, uploading: false, error: getReadableCmsError(err) }
               : img,
           ),
@@ -280,25 +284,24 @@ function ImageManager({
       return;
     }
 
-    const startIndex = images.length;
     const selectedFiles = Array.from(files).slice(0, availableSlots);
     if (selectedFiles.length < files.length) {
       onLimitReached(`Only the first ${MAX_PRODUCT_IMAGES} images were added.`);
     }
 
-    const newImgs: ImageDraft[] = selectedFiles.map((f) => ({
+    const newImgs: ImageDraft[] = selectedFiles.map((f, idx) => ({
+      clientId: makeImageClientId(),
       url: URL.createObjectURL(f),
       alt: f.name.replace(/\.[^.]+$/, ""),
-      isThumbnail: images.length === 0,
+      isThumbnail: images.length === 0 && idx === 0,
       pendingFile: f,
       uploading: false,
     }));
     onChange((prev) => [...prev, ...newImgs]);
     // kick off uploads
-    newImgs.forEach((img, idx) => {
-      const realIdx = startIndex + idx;
+    newImgs.forEach((img) => {
       if (img.pendingFile) {
-        void uploadFile(img.pendingFile, realIdx);
+        void uploadFile(img.pendingFile, img.clientId);
       }
     });
   };
@@ -315,6 +318,7 @@ function ImageManager({
     onChange((prev) => [
       ...prev,
       {
+        clientId: makeImageClientId(),
         url: urlInput.trim(),
         alt: urlAlt.trim() || urlInput.trim(),
         isThumbnail: prev.length === 0,
@@ -365,7 +369,7 @@ function ImageManager({
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
           {images.map((img, idx) => (
             <div
-              key={idx}
+              key={img.clientId}
               className="relative group aspect-square rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-50"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -470,7 +474,10 @@ function ImageManager({
           multiple
           accept="image/*"
           className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
+          onChange={(e) => {
+            handleFiles(e.target.files);
+            e.target.value = ""; // reset so the same file can be re-selected after deletion
+          }}
         />
 
         {/* Add by URL */}
@@ -717,8 +724,15 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const isNew = !productId;
+  // For new products, pre-generate a UUID so background image uploads go to
+  // the real product folder (products/{id}/…) instead of a tmp-* prefix.
+  const preGeneratedIdRef = useRef<string | undefined>(
+    isNew ? makeImageClientId() : undefined,
+  );
   // track product id after creation so images use the real id
-  const resolvedIdRef = useRef<string | undefined>(productId);
+  const resolvedIdRef = useRef<string | undefined>(
+    productId ?? preGeneratedIdRef.current,
+  );
 
   const set = (key: keyof FormState, value: FormState[keyof FormState]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -728,8 +742,9 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
   useEffect(() => {
     if (!isNew) return;
     if (form.name !== prevNameRef.current) {
+      const previousAutoSlug = slugify(prevNameRef.current);
       prevNameRef.current = form.name;
-      if (!form.slug || form.slug === slugify(prevNameRef.current)) {
+      if (!form.slug || form.slug === previousAutoSlug) {
         set("slug", slugify(form.name));
       }
     }
@@ -789,6 +804,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
 
             setImages(
               (product.images ?? []).map((img) => ({
+                clientId: img.id ?? makeImageClientId(),
                 id: img.id,
                 url: img.url,
                 storagePath: img.storagePath,
@@ -1003,78 +1019,92 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
       return;
     }
 
+    if (images.some((img) => img.error)) {
+      setSaveError(
+        "One or more images failed to upload. Remove or re-upload them before saving.",
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       const data = buildWriteData();
 
       let id: string;
       if (isNew) {
-        id = await adminCreateProduct(data);
+        id = await adminCreateProduct(data, preGeneratedIdRef.current);
         resolvedIdRef.current = id;
       } else {
         id = productId!;
         await adminUpdateProduct(id, data);
       }
 
-      // Sync images (re-upload pending files with real product id if needed)
+      // Sync images – only upload truly pending files
       const finalImages = await Promise.all(
         images.map(async (img) => {
-          if (img.pendingFile) {
-            try {
-              const { url, storagePath } = await adminUploadImage(
-                img.pendingFile,
-                id,
-              );
-              return {
-                ...img,
-                url,
-                storagePath,
-                pendingFile: undefined,
-                uploading: false,
-              };
-            } catch {
-              return img;
-            }
-          }
-          return img;
+          // Already uploaded or URL-only images – pass through
+          if (!img.pendingFile) return img;
+
+          const { url, storagePath } = await adminUploadImage(
+            img.pendingFile,
+            id,
+          );
+          return {
+            ...img,
+            url,
+            storagePath,
+            pendingFile: undefined,
+            uploading: false,
+            error: undefined,
+          };
         }),
       );
 
-      await adminSyncProductImages(
-        id,
-        finalImages.map((img) => ({
-          url: img.url,
-          storagePath: img.storagePath,
-          alt: img.alt,
-          isThumbnail: img.isThumbnail,
-          sortOrder: 0, // managed by array order
-        })),
-      );
-
-      // Update thumbnailUrl on product if images have been set
-      const thumbUrl =
-        finalImages.find((i) => i.isThumbnail)?.url || finalImages[0]?.url;
-      if (thumbUrl && thumbUrl !== data.thumbnailUrl) {
-        await adminUpdateProduct(id, { ...data, thumbnailUrl: thumbUrl });
+      if (finalImages.some((img) => img.pendingFile)) {
+        throw new Error(
+          "Some images could not be uploaded. Please retry those images.",
+        );
       }
 
-      // Sync variants
-      await adminSyncProductVariants(
-        id,
-        variants.map((v) => ({
-          name: v.name,
-          sku: v.sku || undefined,
-          price: parseMoney(v.price),
-          compareAtPrice: parseMoney(v.compareAtPrice),
-          quantity: v.quantity ? parseInt(v.quantity) : undefined,
-          inStock: v.inStock,
-          attributes: Object.fromEntries(
-            v.attributes
-              .filter((a) => a.key.trim())
-              .map((a) => [a.key, a.value]),
-          ),
-        })),
-      );
+      // Compute thumbnail before syncing so we can patch in the same wave
+      const thumbUrl =
+        finalImages.find((i) => i.isThumbnail)?.url || finalImages[0]?.url;
+
+      // Sync images and variants in parallel – they write to independent tables.
+      // Previously sequential, this saves 12-24 s per save when the DB is slow.
+      await Promise.all([
+        adminSyncProductImages(
+          id,
+          finalImages.map((img) => ({
+            url: img.url,
+            storagePath: img.storagePath,
+            alt: img.alt,
+            isThumbnail: img.isThumbnail,
+            sortOrder: 0, // managed by array order
+          })),
+        ),
+        adminSyncProductVariants(
+          id,
+          variants.map((v) => ({
+            name: v.name,
+            sku: v.sku || undefined,
+            price: parseMoney(v.price),
+            compareAtPrice: parseMoney(v.compareAtPrice),
+            quantity: v.quantity ? parseInt(v.quantity) : undefined,
+            inStock: v.inStock,
+            attributes: Object.fromEntries(
+              v.attributes
+                .filter((a) => a.key.trim())
+                .map((a) => [a.key, a.value]),
+            ),
+          })),
+        ),
+        // Patch thumbnail on the product row only when it differs (rare: only if
+        // background upload had not yet resolved before buildWriteData ran).
+        thumbUrl && thumbUrl !== data.thumbnailUrl
+          ? adminUpdateProduct(id, { ...data, thumbnailUrl: thumbUrl })
+          : Promise.resolve(),
+      ]);
 
       setImages(finalImages);
       setSaved(true);
@@ -1136,7 +1166,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
           </select>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || images.some((img) => img.uploading)}
             className="flex items-center gap-2 px-5 py-2 bg-rose-500 text-white rounded-xl text-sm font-medium hover:bg-rose-600 disabled:opacity-60 transition-colors"
           >
             {loading ? (
@@ -1212,39 +1242,6 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
               productId={resolvedIdRef.current}
               onLimitReached={(message) => setSaveError(message)}
             />
-          </Section>
-
-          <Section title="Live Storefront Preview" defaultOpen>
-            <p className="text-xs text-gray-500">
-              Instant preview of how this product will look in the shop card and
-              product detail page.
-            </p>
-
-            <div className="grid gap-4">
-              <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
-                <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500">
-                  Product Card Preview (Real Component)
-                </div>
-                <div className="p-3 max-w-sm pointer-events-none">
-                  <ProductCard product={previewProduct} />
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
-                <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500">
-                  Product Page Preview (Real Component)
-                </div>
-                <div className="px-3 pt-3 pb-1">
-                  <p className="text-xs text-gray-500 mb-3">
-                    Gallery slots used: {previewGallery.length}/
-                    {MAX_PRODUCT_IMAGES}
-                  </p>
-                </div>
-                <div className="max-h-225 overflow-y-auto border-t border-gray-100">
-                  <ProductDetailView product={previewProduct} previewMode />
-                </div>
-              </div>
-            </div>
           </Section>
 
           {/* Variants */}
@@ -1347,6 +1344,39 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
             >
               <Plus size={14} /> Add field
             </button>
+          </Section>
+          {/* Live Storefront Preview */}
+          <Section title="Live Storefront Preview" defaultOpen>
+            <p className="text-xs text-gray-500">
+              Instant preview of how this product will look in the shop card and
+              product detail page.
+            </p>
+
+            <div className="grid gap-4">
+              <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
+                <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500">
+                  Product Card Preview (Real Component)
+                </div>
+                <div className="p-3 max-w-sm pointer-events-none">
+                  <ProductCard product={previewProduct} />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
+                <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500">
+                  Product Page Preview (Real Component)
+                </div>
+                <div className="px-3 pt-3 pb-1">
+                  <p className="text-xs text-gray-500 mb-3">
+                    Gallery slots used: {previewGallery.length}/
+                    {MAX_PRODUCT_IMAGES}
+                  </p>
+                </div>
+                <div className="max-h-225 overflow-y-auto border-t border-gray-100">
+                  <ProductDetailView product={previewProduct} previewMode />
+                </div>
+              </div>
+            </div>
           </Section>
         </div>
 
