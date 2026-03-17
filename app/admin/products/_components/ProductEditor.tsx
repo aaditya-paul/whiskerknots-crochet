@@ -1039,26 +1039,25 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
         await adminUpdateProduct(id, data);
       }
 
-      // Sync images – only upload truly pending files
-      const finalImages = await Promise.all(
-        images.map(async (img) => {
-          // Already uploaded or URL-only images – pass through
-          if (!img.pendingFile) return img;
+      // Sync images – upload in series to avoid spiking concurrent storage
+      // connections when Supabase is slow.
+      const finalImages: ImageDraft[] = [];
+      for (const img of images) {
+        if (!img.pendingFile) {
+          finalImages.push(img);
+          continue;
+        }
 
-          const { url, storagePath } = await adminUploadImage(
-            img.pendingFile,
-            id,
-          );
-          return {
-            ...img,
-            url,
-            storagePath,
-            pendingFile: undefined,
-            uploading: false,
-            error: undefined,
-          };
-        }),
-      );
+        const { url, storagePath } = await adminUploadImage(img.pendingFile, id);
+        finalImages.push({
+          ...img,
+          url,
+          storagePath,
+          pendingFile: undefined,
+          uploading: false,
+          error: undefined,
+        });
+      }
 
       if (finalImages.some((img) => img.pendingFile)) {
         throw new Error(
@@ -1070,41 +1069,37 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
       const thumbUrl =
         finalImages.find((i) => i.isThumbnail)?.url || finalImages[0]?.url;
 
-      // Sync images and variants in parallel – they write to independent tables.
-      // Previously sequential, this saves 12-24 s per save when the DB is slow.
-      await Promise.all([
-        adminSyncProductImages(
-          id,
-          finalImages.map((img) => ({
-            url: img.url,
-            storagePath: img.storagePath,
-            alt: img.alt,
-            isThumbnail: img.isThumbnail,
-            sortOrder: 0, // managed by array order
-          })),
-        ),
-        adminSyncProductVariants(
-          id,
-          variants.map((v) => ({
-            name: v.name,
-            sku: v.sku || undefined,
-            price: parseMoney(v.price),
-            compareAtPrice: parseMoney(v.compareAtPrice),
-            quantity: v.quantity ? parseInt(v.quantity) : undefined,
-            inStock: v.inStock,
-            attributes: Object.fromEntries(
-              v.attributes
-                .filter((a) => a.key.trim())
-                .map((a) => [a.key, a.value]),
-            ),
-          })),
-        ),
-        // Patch thumbnail on the product row only when it differs (rare: only if
-        // background upload had not yet resolved before buildWriteData ran).
-        thumbUrl && thumbUrl !== data.thumbnailUrl
-          ? adminUpdateProduct(id, { ...data, thumbnailUrl: thumbUrl })
-          : Promise.resolve(),
-      ]);
+      await adminSyncProductImages(
+        id,
+        finalImages.map((img) => ({
+          url: img.url,
+          storagePath: img.storagePath,
+          alt: img.alt,
+          isThumbnail: img.isThumbnail,
+          sortOrder: 0, // managed by array order
+        })),
+      );
+
+      await adminSyncProductVariants(
+        id,
+        variants.map((v) => ({
+          name: v.name,
+          sku: v.sku || undefined,
+          price: parseMoney(v.price),
+          compareAtPrice: parseMoney(v.compareAtPrice),
+          quantity: v.quantity ? parseInt(v.quantity) : undefined,
+          inStock: v.inStock,
+          attributes: Object.fromEntries(
+            v.attributes.filter((a) => a.key.trim()).map((a) => [a.key, a.value]),
+          ),
+        })),
+      );
+
+      // Patch thumbnail on the product row only when it differs (rare: only if
+      // background upload had not yet resolved before buildWriteData ran).
+      if (thumbUrl && thumbUrl !== data.thumbnailUrl) {
+        await adminUpdateProduct(id, { ...data, thumbnailUrl: thumbUrl });
+      }
 
       setImages(finalImages);
       setSaved(true);

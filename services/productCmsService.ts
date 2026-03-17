@@ -46,6 +46,9 @@ let productsCache: { data: Product[]; timestamp: number } | null = null;
 let categoriesCache: { data: Category[]; timestamp: number } | null = null;
 let productsRequest: Promise<Product[]> | null = null;
 let categoriesRequest: Promise<Category[]> | null = null;
+let adminProductsRequest: Promise<Product[]> | null = null;
+let adminCategoriesRequest: Promise<Category[]> | null = null;
+let writeQueue: Promise<void> = Promise.resolve();
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -67,6 +70,23 @@ const withTimeout = async <T>(
     ]);
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
+  }
+};
+
+const withAbortableTimeout = async <T>(
+  queryFactory: (signal: AbortSignal) => PromiseLike<T>,
+  timeoutMs = QUERY_TIMEOUT_MS,
+): Promise<T> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(new Error(`Request timeout after ${timeoutMs}ms`)),
+    timeoutMs,
+  );
+
+  try {
+    return await queryFactory(controller.signal);
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -132,6 +152,22 @@ const withRetry = async <T>(task: () => Promise<T>, retries = 2) => {
   }
 
   throw lastError;
+};
+
+const runWrite = async <T>(task: () => Promise<T>): Promise<T> => {
+  const previous = writeQueue;
+  let release: (() => void) | null = null;
+  writeQueue = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  await previous;
+
+  try {
+    return await task();
+  } finally {
+    release?.();
+  }
 };
 
 const invalidateProductsCache = () => {
@@ -442,18 +478,27 @@ export const subscribeToProducts = (
 
 /** Fetch ALL products (all statuses) for the admin panel */
 export const adminFetchProducts = async (): Promise<Product[]> => {
-  const { data, error } = await withRetry(() =>
-    withTimeout(
+  if (adminProductsRequest) return adminProductsRequest;
+
+  adminProductsRequest = withRetry(() =>
+    withAbortableTimeout((signal) =>
       supabase
         .from("products")
         .select(PRODUCT_SELECT)
         .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .abortSignal(signal),
     ),
-  );
+  )
+    .then(({ data, error }) => {
+      if (error) throw error;
+      return (data ?? []).map(rowToProduct);
+    })
+    .finally(() => {
+      adminProductsRequest = null;
+    });
 
-  if (error) throw error;
-  return (data ?? []).map(rowToProduct);
+  return adminProductsRequest;
 };
 
 /** Fetch a single product for the admin editor (includes variants) */
@@ -461,12 +506,13 @@ export const adminFetchProduct = async (
   id: string,
 ): Promise<Product | null> => {
   const { data, error } = await withRetry(() =>
-    withTimeout(
+    withAbortableTimeout((signal) =>
       supabase
         .from("products")
         .select(PRODUCT_SELECT_WITH_VARIANTS)
         .eq("id", id)
-        .single(),
+        .single()
+        .abortSignal(signal),
     ),
   );
 
@@ -479,18 +525,27 @@ export const adminFetchProduct = async (
 
 /** Fetch ALL categories for the admin panel */
 export const adminFetchCategories = async (): Promise<Category[]> => {
-  const { data, error } = await withRetry(() =>
-    withTimeout(
+  if (adminCategoriesRequest) return adminCategoriesRequest;
+
+  adminCategoriesRequest = withRetry(() =>
+    withAbortableTimeout((signal) =>
       supabase
         .from("categories")
         .select("*")
         .order("sort_order", { ascending: true })
-        .order("name", { ascending: true }),
+        .order("name", { ascending: true })
+        .abortSignal(signal),
     ),
-  );
+  )
+    .then(({ data, error }) => {
+      if (error) throw error;
+      return (data ?? []).map(rowToCategory);
+    })
+    .finally(() => {
+      adminCategoriesRequest = null;
+    });
 
-  if (error) throw error;
-  return (data ?? []).map(rowToCategory);
+  return adminCategoriesRequest;
 };
 
 // ── Product CRUD ──
@@ -565,36 +620,51 @@ export const adminCreateProduct = async (
 ): Promise<string> => {
   const payload = productWritePayload(data);
   if (preGeneratedId) (payload as Record<string, unknown>).id = preGeneratedId;
-  return withRetry(async () => {
-    const { data: row, error } = await withTimeout(
-      supabase.from("products").insert(payload).select("id").single(),
-    );
-    if (error) throw error;
-    invalidateProductsCache();
-    return row.id as string;
-  });
+  return runWrite(() =>
+    withRetry(async () => {
+      const { data: row, error } = await withAbortableTimeout((signal) =>
+        supabase
+          .from("products")
+          .insert(payload)
+          .select("id")
+          .single()
+          .abortSignal(signal),
+      );
+      if (error) throw error;
+      invalidateProductsCache();
+      return row.id as string;
+    }),
+  );
 };
 
 export const adminUpdateProduct = async (
   id: string,
   data: ProductWriteData,
 ): Promise<void> => {
-  return withRetry(async () => {
-    const { error } = await withTimeout(
-      supabase.from("products").update(productWritePayload(data)).eq("id", id),
-    );
-    if (error) throw error;
-    invalidateProductsCache();
-  });
+  return runWrite(() =>
+    withRetry(async () => {
+      const { error } = await withAbortableTimeout((signal) =>
+        supabase
+          .from("products")
+          .update(productWritePayload(data))
+          .eq("id", id)
+          .abortSignal(signal),
+      );
+      if (error) throw error;
+      invalidateProductsCache();
+    }),
+  );
 };
 
 export const adminDeleteProduct = async (id: string): Promise<void> => {
-  const { error } = await withTimeout(
-    supabase.from("products").delete().eq("id", id),
-  );
+  return runWrite(async () => {
+    const { error } = await withAbortableTimeout((signal) =>
+      supabase.from("products").delete().eq("id", id).abortSignal(signal),
+    );
 
-  if (error) throw error;
-  invalidateProductsCache();
+    if (error) throw error;
+    invalidateProductsCache();
+  });
 };
 
 // ── Category CRUD ──
@@ -626,38 +696,49 @@ const categoryWritePayload = (d: CategoryWriteData) => ({
 export const adminCreateCategory = async (
   data: CategoryWriteData,
 ): Promise<string> => {
-  const { data: row, error } = await withTimeout(
-    supabase
-      .from("categories")
-      .insert(categoryWritePayload(data))
-      .select("id")
-      .single(),
-  );
+  return runWrite(async () => {
+    const { data: row, error } = await withAbortableTimeout((signal) =>
+      supabase
+        .from("categories")
+        .insert(categoryWritePayload(data))
+        .select("id")
+        .single()
+        .abortSignal(signal),
+    );
 
-  if (error) throw error;
-  invalidateStorefrontCache();
-  return row.id;
+    if (error) throw error;
+    invalidateStorefrontCache();
+    return row.id;
+  });
 };
 
 export const adminUpdateCategory = async (
   id: string,
   data: CategoryWriteData,
 ): Promise<void> => {
-  const { error } = await withTimeout(
-    supabase.from("categories").update(categoryWritePayload(data)).eq("id", id),
-  );
+  return runWrite(async () => {
+    const { error } = await withAbortableTimeout((signal) =>
+      supabase
+        .from("categories")
+        .update(categoryWritePayload(data))
+        .eq("id", id)
+        .abortSignal(signal),
+    );
 
-  if (error) throw error;
-  invalidateStorefrontCache();
+    if (error) throw error;
+    invalidateStorefrontCache();
+  });
 };
 
 export const adminDeleteCategory = async (id: string): Promise<void> => {
-  const { error } = await withTimeout(
-    supabase.from("categories").delete().eq("id", id),
-  );
+  return runWrite(async () => {
+    const { error } = await withAbortableTimeout((signal) =>
+      supabase.from("categories").delete().eq("id", id).abortSignal(signal),
+    );
 
-  if (error) throw error;
-  invalidateStorefrontCache();
+    if (error) throw error;
+    invalidateStorefrontCache();
+  });
 };
 
 // ── Image management ──
@@ -710,32 +791,38 @@ export const adminSyncProductImages = async (
 ): Promise<void> => {
   // Delete all existing images then re-insert to keep ordering simple.
   // Wrapped in retry so a transient lock error doesn't orphan images.
-  return withRetry(async () => {
-    const { error: delError } = await withTimeout(
-      supabase.from("product_images").delete().eq("product_id", productId),
-    );
-    if (delError) throw delError;
+  return runWrite(() =>
+    withRetry(async () => {
+      const { error: delError } = await withAbortableTimeout((signal) =>
+        supabase
+          .from("product_images")
+          .delete()
+          .eq("product_id", productId)
+          .abortSignal(signal),
+      );
+      if (delError) throw delError;
 
-    if (images.length === 0) {
+      if (images.length === 0) {
+        invalidateProductsCache();
+        return;
+      }
+
+      const rows = images.map((img, i) => ({
+        product_id: productId,
+        url: img.url,
+        storage_path: img.storagePath ?? null,
+        alt: img.alt,
+        is_thumbnail: img.isThumbnail,
+        sort_order: i,
+      }));
+
+      const { error } = await withAbortableTimeout((signal) =>
+        supabase.from("product_images").insert(rows).abortSignal(signal),
+      );
+      if (error) throw error;
       invalidateProductsCache();
-      return;
-    }
-
-    const rows = images.map((img, i) => ({
-      product_id: productId,
-      url: img.url,
-      storage_path: img.storagePath ?? null,
-      alt: img.alt,
-      is_thumbnail: img.isThumbnail,
-      sort_order: i,
-    }));
-
-    const { error } = await withTimeout(
-      supabase.from("product_images").insert(rows),
-    );
-    if (error) throw error;
-    invalidateProductsCache();
-  });
+    }),
+  );
 };
 
 // ── Variant management ──
@@ -756,36 +843,42 @@ export const adminSyncProductVariants = async (
   productId: string,
   variants: VariantWriteData[],
 ): Promise<void> => {
-  return withRetry(async () => {
-    const { error: delError } = await withTimeout(
-      supabase.from("product_variants").delete().eq("product_id", productId),
-    );
-    if (delError) throw delError;
+  return runWrite(() =>
+    withRetry(async () => {
+      const { error: delError } = await withAbortableTimeout((signal) =>
+        supabase
+          .from("product_variants")
+          .delete()
+          .eq("product_id", productId)
+          .abortSignal(signal),
+      );
+      if (delError) throw delError;
 
-    if (variants.length === 0) {
+      if (variants.length === 0) {
+        invalidateProductsCache();
+        return;
+      }
+
+      const rows = variants.map((v, i) => ({
+        product_id: productId,
+        name: v.name,
+        sku: v.sku ?? null,
+        price: v.price ?? null,
+        compare_at_price: v.compareAtPrice ?? null,
+        quantity: v.quantity ?? null,
+        in_stock: v.inStock,
+        image_url: v.imageUrl ?? null,
+        attributes: v.attributes,
+        sort_order: i,
+      }));
+
+      const { error } = await withAbortableTimeout((signal) =>
+        supabase.from("product_variants").insert(rows).abortSignal(signal),
+      );
+      if (error) throw error;
       invalidateProductsCache();
-      return;
-    }
-
-    const rows = variants.map((v, i) => ({
-      product_id: productId,
-      name: v.name,
-      sku: v.sku ?? null,
-      price: v.price ?? null,
-      compare_at_price: v.compareAtPrice ?? null,
-      quantity: v.quantity ?? null,
-      in_stock: v.inStock,
-      image_url: v.imageUrl ?? null,
-      attributes: v.attributes,
-      sort_order: i,
-    }));
-
-    const { error } = await withTimeout(
-      supabase.from("product_variants").insert(rows),
-    );
-    if (error) throw error;
-    invalidateProductsCache();
-  });
+    }),
+  );
 };
 
 // ─── Legacy / compat exports ──────────────────────────────────────────────────
