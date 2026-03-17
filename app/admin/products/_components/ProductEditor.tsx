@@ -35,11 +35,17 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import {
-  adminDb,
-  adminLoadProductEditorData,
-  getReadableAdminDbError,
+  adminCreateProduct,
+  adminDeleteImageFromStorage,
+  adminFetchCategories,
+  adminFetchProduct,
+  adminSyncProductImages,
+  adminSyncProductVariants,
+  adminUpdateProduct,
+  adminUploadImage,
+  getReadableDbError,
   ProductWriteData,
-} from "@/services/adminDbService";
+} from "@/lib/db";
 import { Category, Product, ProductStatus } from "@/types/types";
 import ProductCard from "@/components/ProductCard";
 import ProductDetailView from "@/components/ProductDetailView";
@@ -103,6 +109,15 @@ type FormState = {
   sortOrder: string;
   seoTitle: string;
   seoDescription: string;
+};
+
+const loadProductEditorData = async (productId?: string) => {
+  const [categories, product] = await Promise.all([
+    adminFetchCategories(),
+    productId ? adminFetchProduct(productId) : Promise.resolve(null),
+  ]);
+
+  return { categories, product };
 };
 
 const EMPTY_FORM: FormState = {
@@ -240,7 +255,7 @@ function ImageManager({
               : img,
           ),
         );
-        const { url, storagePath } = await adminDb.uploadImage(file, tempId);
+        const { url, storagePath } = await adminUploadImage(file, tempId);
         onChange((prev) =>
           prev.map((img) =>
             img.clientId === clientId
@@ -261,7 +276,7 @@ function ImageManager({
               ? {
                   ...img,
                   uploading: false,
-                  error: getReadableAdminDbError(err),
+                  error: getReadableDbError(err),
                 }
               : img,
           ),
@@ -330,7 +345,7 @@ function ImageManager({
     const img = images[idx];
     if (img.storagePath) {
       try {
-        await adminDb.deleteImageFromStorage(img.storagePath);
+        await adminDeleteImageFromStorage(img.storagePath);
       } catch {
         // ignore storage errors on removal
       }
@@ -754,7 +769,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
     const init = async () => {
       try {
         const { categories: cats, product } =
-          await adminLoadProductEditorData(productId);
+          await loadProductEditorData(productId);
         setCategories(cats);
         if (!productId && cats.length > 0) {
           setForm((prev) => ({
@@ -840,7 +855,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
           }
         }
       } catch (err) {
-        setSaveError(getReadableAdminDbError(err));
+        setSaveError(getReadableDbError(err));
       } finally {
         setInitialising(false);
       }
@@ -1030,11 +1045,11 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
 
       let id: string;
       if (isNew) {
-        id = await adminDb.createProduct(data, preGeneratedIdRef.current);
+        id = await adminCreateProduct(data, preGeneratedIdRef.current);
         resolvedIdRef.current = id;
       } else {
         id = productId!;
-        await adminDb.updateProduct(id, data);
+        await adminUpdateProduct(id, data);
       }
 
       // Sync images – only upload truly pending files
@@ -1043,7 +1058,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
           // Already uploaded or URL-only images – pass through
           if (!img.pendingFile) return img;
 
-          const { url, storagePath } = await adminDb.uploadImage(
+          const { url, storagePath } = await adminUploadImage(
             img.pendingFile,
             id,
           );
@@ -1071,7 +1086,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
       // Sync images and variants in parallel – they write to independent tables.
       // Previously sequential, this saves 12-24 s per save when the DB is slow.
       await Promise.all([
-        adminDb.syncProductImages(
+        adminSyncProductImages(
           id,
           finalImages.map((img) => ({
             url: img.url,
@@ -1081,7 +1096,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
             sortOrder: 0, // managed by array order
           })),
         ),
-        adminDb.syncProductVariants(
+        adminSyncProductVariants(
           id,
           variants.map((v) => ({
             name: v.name,
@@ -1100,7 +1115,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
         // Patch thumbnail on the product row only when it differs (rare: only if
         // background upload had not yet resolved before buildWriteData ran).
         thumbUrl && thumbUrl !== data.thumbnailUrl
-          ? adminDb.updateProduct(id, { ...data, thumbnailUrl: thumbUrl })
+          ? adminUpdateProduct(id, { ...data, thumbnailUrl: thumbUrl })
           : Promise.resolve(),
       ]);
 
@@ -1113,7 +1128,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
         window.location.href = `/admin/products/${id}`;
       }
     } catch (err) {
-      setSaveError(getReadableAdminDbError(err));
+      setSaveError(getReadableDbError(err));
     } finally {
       setLoading(false);
     }

@@ -6,7 +6,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { supabase } from "../lib/supabase";
+import { dbAuth, dbProfiles, dbUserState } from "../lib/db";
 
 const AUTH_INIT_TIMEOUT_MS = 12_000;
 
@@ -54,15 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   ): Promise<boolean> => {
     const createIfMissing = options?.createIfMissing ?? false;
 
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("id,email,display_name,photo_url,created_at")
-      .eq("id", authUser.uid)
-      .single();
-
-    if (profileError && profileError.code !== "PGRST116") {
-      throw profileError;
-    }
+    const profileData = await dbProfiles.fetchByUserId(authUser.uid);
 
     if (profileData) {
       const profile: UserProfile = {
@@ -91,37 +83,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       createdAt: new Date().toISOString(),
     };
 
-    const { error: upsertError } = await supabase.from("profiles").upsert(
-      {
-        id: profileToCreate.uid,
-        email: profileToCreate.email,
-        display_name: profileToCreate.displayName,
-        photo_url: profileToCreate.photoURL,
-        created_at: profileToCreate.createdAt,
-      },
-      {
-        onConflict: "id",
-      },
-    );
-
-    if (upsertError) {
-      throw upsertError;
-    }
+    await dbProfiles.upsert({
+      id: profileToCreate.uid,
+      email: profileToCreate.email,
+      displayName: profileToCreate.displayName,
+      photoUrl: profileToCreate.photoURL,
+      createdAt: profileToCreate.createdAt,
+    });
 
     // Also create initial user_state row so CartContext can sync without RLS issues
-    const { error: userStateError } = await supabase.from("user_state").upsert(
-      {
-        user_id: profileToCreate.uid,
-        cart: [],
-        favorites: [],
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "user_id",
-      },
-    );
-
-    if (userStateError) {
+    try {
+      await dbUserState.ensureEmptyRow(profileToCreate.uid);
+    } catch (userStateError) {
       console.warn("Failed to create initial user_state row:", userStateError);
       // Don't throw - profile was created successfully, user_state creation can happen later
     }
@@ -157,7 +130,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     const signOutUnavailableBackendAccount = async () => {
       try {
-        await supabase.auth.signOut();
+        await dbAuth.signOut();
       } catch (error) {
         console.error("Failed to sign out unavailable backend account:", error);
       }
@@ -171,7 +144,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await dbAuth.getSession();
 
         if (!mounted) return;
 
@@ -213,9 +186,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     initializeAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const handleAuthStateChange = async (
+      event: string,
+      session: Awaited<ReturnType<typeof dbAuth.getSession>>["data"]["session"],
+    ) => {
       if (!mounted) return;
 
       if (session?.user) {
@@ -236,14 +210,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             console.warn(
               "Signed out: authenticated user missing in backend profiles.",
             );
-            await supabase.auth.signOut();
+            await dbAuth.signOut();
             if (!mounted) return;
             setUser(null);
             setUserProfile(null);
           }
         } catch (error) {
           console.error("Error loading backend profile:", error);
-          await supabase.auth.signOut();
+          await dbAuth.signOut();
           if (!mounted) return;
           setUser(null);
           setUserProfile(null);
@@ -254,6 +228,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
 
       if (mounted) setLoading(false);
+    };
+
+    const {
+      data: { subscription },
+    } = dbAuth.onAuthStateChange((event, session) => {
+      // Supabase recommends keeping this callback fast and deferring async work.
+      setTimeout(() => {
+        void handleAuthStateChange(String(event), session);
+      }, 0);
+      return Promise.resolve();
     });
 
     return () => {
@@ -268,15 +252,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     password: string,
     displayName: string,
   ) => {
-    const { error: signupError } = await supabase.auth.signUp({
+    const { error: signupError } = await dbAuth.signUp(
       email,
       password,
-      options: {
-        data: {
-          full_name: displayName,
-        },
-      },
-    });
+      displayName,
+    );
 
     if (signupError) {
       throw signupError;
@@ -286,10 +266,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await dbAuth.signInWithPassword(email, password);
 
     if (error) {
       throw error;
@@ -297,7 +274,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await dbAuth.signOut();
     if (error) {
       throw error;
     }
@@ -309,27 +286,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const updateUserProfile = async (displayName: string) => {
     if (!user) return;
 
-    const { error: authError } = await supabase.auth.updateUser({
-      data: {
-        full_name: displayName,
-      },
-    });
+    const { error: authError } =
+      await dbAuth.updateUserDisplayName(displayName);
 
     if (authError) {
       throw authError;
     }
 
-    const { error: profileError } = await supabase.from("profiles").upsert({
+    await dbProfiles.upsert({
       id: user.uid,
       email: user.email || "",
-      display_name: displayName,
-      photo_url: user.photoURL,
-      created_at: userProfile?.createdAt || new Date().toISOString(),
+      displayName,
+      photoUrl: user.photoURL,
+      createdAt: userProfile?.createdAt || new Date().toISOString(),
     });
-
-    if (profileError) {
-      throw profileError;
-    }
 
     setUserProfile((prev) => (prev ? { ...prev, displayName } : null));
     setUser((prev) => (prev ? { ...prev, displayName } : null));

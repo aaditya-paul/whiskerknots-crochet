@@ -7,8 +7,7 @@ import React, {
   useRef,
   ReactNode,
 } from "react";
-import { supabase } from "../lib/supabase";
-import { getReadableSupabaseError } from "../services/productCmsService";
+import { dbUserState, getReadableDbError } from "../lib/db";
 import { Product } from "../types/types";
 import { useAuth } from "./AuthContext";
 
@@ -80,21 +79,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
           localStorage.getItem("favorites") || "[]",
         );
 
-        const { data: remoteState, error: readError } = await supabase
-          .from("user_state")
-          .select("cart,favorites")
-          .eq("user_id", user.uid)
-          .single();
-
-        // If no existing row, that's OK - we'll create one below
-        if (readError && readError.code !== "PGRST116") {
-          // PGRST116 = row not found (expected for new users after signup)
-          console.error(
-            "Error reading user_state:",
-            getReadableSupabaseError(readError),
-          );
-          // Don't throw - gracefully fall back to upsert which will create the row
-        }
+        const remoteState = await dbUserState.fetchByUserId(user.uid);
 
         if (remoteState) {
           const remoteCart = Array.isArray(remoteState.cart)
@@ -123,56 +108,24 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
           localStorage.setItem("whiskerknots-cart", JSON.stringify(mergedCart));
           localStorage.setItem("favorites", JSON.stringify(mergedFavorites));
 
-          const { error: writeError } = await supabase
-            .from("user_state")
-            .upsert(
-              {
-                user_id: user.uid,
-                cart: mergedCart,
-                favorites: mergedFavorites,
-                updated_at: new Date().toISOString(),
-              },
-              {
-                onConflict: "user_id",
-              },
-            );
-
-          if (writeError) {
-            console.error(
-              "Error upserting merged state:",
-              getReadableSupabaseError(writeError),
-            );
-            throw writeError;
-          }
+          await dbUserState.upsert({
+            userId: user.uid,
+            cart: mergedCart,
+            favorites: mergedFavorites,
+          });
 
           // Trigger favorites update event
           window.dispatchEvent(new Event("favoritesChanged"));
         } else {
           // No remote row - create one with local data
-          const { error: upsertError } = await supabase
-            .from("user_state")
-            .upsert(
-              {
-                user_id: user.uid,
-                cart: localCart,
-                favorites: localFavorites,
-                updated_at: new Date().toISOString(),
-              },
-              {
-                onConflict: "user_id",
-              },
-            );
-
-          if (upsertError) {
-            console.error(
-              "Error creating initial user_state:",
-              getReadableSupabaseError(upsertError),
-            );
-            throw upsertError;
-          }
+          await dbUserState.upsert({
+            userId: user.uid,
+            cart: localCart,
+            favorites: localFavorites,
+          });
         }
       } catch (error) {
-        const errorMsg = getReadableSupabaseError(error);
+        const errorMsg = getReadableDbError(error);
         if (
           typeof errorMsg === "string" &&
           errorMsg.includes("row-level security")
@@ -209,26 +162,17 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
         hasCompletedInitialRemoteSyncRef.current &&
         !isInitialRemoteSyncInFlightRef.current
       ) {
-        supabase
-          .from("user_state")
-          .upsert(
-            {
-              user_id: user.uid,
-              cart: items,
-              updated_at: new Date().toISOString(),
-            },
-            {
-              onConflict: "user_id",
-            },
-          )
-          .then(({ error }) => {
-            if (error) {
-              console.error(
-                "Failed to sync cart to Supabase:",
-                getReadableSupabaseError(error),
-                error,
-              );
-            }
+        dbUserState
+          .upsert({
+            userId: user.uid,
+            cart: items,
+          })
+          .catch((error) => {
+            console.error(
+              "Failed to sync cart to Supabase:",
+              getReadableDbError(error),
+              error,
+            );
           });
       }
     }

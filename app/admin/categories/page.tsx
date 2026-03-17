@@ -13,10 +13,13 @@ import {
   AlertCircle,
 } from "lucide-react";
 import {
-  adminDb,
+  adminCreateCategory,
+  adminDeleteCategory,
+  adminFetchCategories,
+  adminUpdateCategory,
   CategoryWriteData,
-  getReadableAdminDbError,
-} from "@/services/adminDbService";
+  getReadableDbError,
+} from "@/lib/db";
 import { Category } from "@/types/types";
 import { slugify } from "@/utils/slugify";
 
@@ -89,7 +92,7 @@ function CategoryForm({
     try {
       await onSave({ ...form, id: initial.id });
     } catch (err) {
-      setError(getReadableAdminDbError(err));
+      setError(getReadableDbError(err));
     } finally {
       setSaving(false);
     }
@@ -285,9 +288,9 @@ export default function CategoriesPage() {
     setLoading(true);
     setError(null);
     try {
-      setCategories(await adminDb.loadCategoriesPageData());
+      setCategories(await adminFetchCategories());
     } catch (err) {
-      setError(getReadableAdminDbError(err));
+      setError(getReadableDbError(err));
     } finally {
       setLoading(false);
     }
@@ -325,14 +328,14 @@ export default function CategoriesPage() {
   };
 
   const handleCreate = async (data: CategoryWriteData) => {
-    await adminDb.createCategory(data);
+    await adminCreateCategory(data);
     setCreating(false);
     await load();
   };
 
   const handleUpdate = async (data: CategoryWriteData & { id?: string }) => {
     if (!data.id) return;
-    await adminDb.updateCategory(data.id, data);
+    await adminUpdateCategory(data.id, data);
     setEditingId(null);
     await load();
   };
@@ -341,10 +344,10 @@ export default function CategoriesPage() {
     if (!confirm("Delete this category? This cannot be undone.")) return;
     setDeletingId(id);
     try {
-      await adminDb.deleteCategory(id);
+      await adminDeleteCategory(id);
       await load();
     } catch (err) {
-      setError(getReadableAdminDbError(err));
+      setError(getReadableDbError(err));
     } finally {
       setDeletingId(null);
     }

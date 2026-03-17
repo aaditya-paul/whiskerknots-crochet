@@ -4,8 +4,8 @@ import React, { createContext, useEffect, useMemo, useState } from "react";
 import { Category, Product } from "../types/types";
 import {
   fetchCategories,
+  fetchProducts,
   getReadableCmsError,
-  subscribeToProducts,
 } from "../services/productCmsService";
 
 export interface ProductsContextValue {
@@ -38,40 +38,27 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }, 45_000);
 
-    fetchCategories()
-      .then((loadedCategories) => {
-        if (isMounted) setCategories(loadedCategories);
-      })
-      .catch((err) => {
-        console.warn("Could not load categories:", getReadableCmsError(err));
-      });
-
-    const unsubscribe = subscribeToProducts(
-      (cmsProducts) => {
+    Promise.all([fetchProducts(), fetchCategories()])
+      .then(([cmsProducts, loadedCategories]) => {
         if (!isMounted) return;
+        setCategories(loadedCategories);
         stopWatchdog();
         setProducts(cmsProducts);
         setError(null);
         setLoading(false);
-      },
-      (cmsError, source) => {
+      })
+      .catch((cmsError) => {
         if (!isMounted) return;
         const readable = getReadableCmsError(cmsError);
-        if (source === "realtime") {
-          console.warn("Realtime unavailable:", readable);
-          return;
-        }
         stopWatchdog();
         console.error("Failed to load products:", readable);
         setError(readable);
         setLoading(false);
-      },
-    );
+      });
 
     return () => {
       isMounted = false;
       stopWatchdog();
-      unsubscribe();
     };
   }, []);
 

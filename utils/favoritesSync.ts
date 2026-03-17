@@ -1,5 +1,4 @@
-import { supabase } from "../lib/supabase";
-import { getReadableSupabaseError } from "../services/productCmsService";
+import { dbUserState, getReadableDbError } from "../lib/db";
 
 // Sync favorites to Supabase
 export const syncFavoritesToSupabase = async (
@@ -7,24 +6,11 @@ export const syncFavoritesToSupabase = async (
   favorites: string[],
 ) => {
   try {
-    const { error } = await supabase.from("user_state").upsert(
-      {
-        user_id: userId,
-        favorites,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "user_id",
-      },
-    );
-
-    if (error) {
-      throw error;
-    }
+    await dbUserState.upsert({ userId, favorites });
   } catch (error) {
     console.error(
       "Failed to sync favorites to Supabase:",
-      getReadableSupabaseError(error),
+      getReadableDbError(error),
       error,
     );
   }

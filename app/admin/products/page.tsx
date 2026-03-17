@@ -16,7 +16,13 @@ import {
   RefreshCw,
   Filter,
 } from "lucide-react";
-import { adminDb, getReadableAdminDbError } from "@/services/adminDbService";
+import {
+  adminDeleteProduct,
+  adminFetchCategories,
+  adminFetchProducts,
+  adminUpdateProduct,
+  getReadableDbError,
+} from "@/lib/db";
 import { Product, Category, ProductStatus } from "@/types/types";
 
 const STATUS_LABELS: Record<ProductStatus | "all", string> = {
@@ -57,12 +63,14 @@ export default function ProductsPage() {
     setLoading(true);
     setError(null);
     try {
-      const { products: prods, categories: cats } =
-        await adminDb.loadProductsPageData();
+      const [prods, cats] = await Promise.all([
+        adminFetchProducts(),
+        adminFetchCategories(),
+      ]);
       setProducts(prods);
       setCategories(cats);
     } catch (err) {
-      setError(getReadableAdminDbError(err));
+      setError(getReadableDbError(err));
     } finally {
       setLoading(false);
     }
@@ -122,10 +130,10 @@ export default function ProductsPage() {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     setDeleting(id);
     try {
-      await adminDb.deleteProduct(id);
+      await adminDeleteProduct(id);
       setProducts((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      alert(getReadableAdminDbError(err));
+      alert(getReadableDbError(err));
     } finally {
       setDeleting(null);
     }
@@ -135,7 +143,7 @@ export default function ProductsPage() {
     const next: ProductStatus =
       product.status === "active" ? "draft" : "active";
     try {
-      await adminDb.updateProduct(product.id, {
+      await adminUpdateProduct(product.id, {
         name: product.name,
         slug: product.slug,
         description: product.description,
@@ -170,7 +178,7 @@ export default function ProductsPage() {
         prev.map((p) => (p.id === product.id ? { ...p, status: next } : p)),
       );
     } catch (err) {
-      alert(getReadableAdminDbError(err));
+      alert(getReadableDbError(err));
     }
   };
 

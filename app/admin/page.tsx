@@ -14,9 +14,10 @@ import {
   Clock,
 } from "lucide-react";
 import {
-  adminLoadDashboardData,
-  getReadableAdminDbError,
-} from "@/services/adminDbService";
+  adminFetchCategories,
+  adminFetchProducts,
+  getReadableDbError,
+} from "@/lib/db";
 import { Product, Category } from "@/types/types";
 
 function StatCard({
@@ -54,15 +55,15 @@ export default function AdminDashboard() {
   useEffect(() => {
     let isMounted = true;
 
-    adminLoadDashboardData()
-      .then(({ products: prods, categories: cats }) => {
+    Promise.all([adminFetchProducts(), adminFetchCategories()])
+      .then(([prods, cats]) => {
         if (!isMounted) return;
         setProducts(prods);
         setCategories(cats);
       })
       .catch((err) => {
         if (!isMounted) return;
-        setError(getReadableAdminDbError(err));
+        setError(getReadableDbError(err));
       })
       .finally(() => {
         if (!isMounted) return;
