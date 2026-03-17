@@ -16,10 +16,7 @@ import {
   RefreshCw,
   Filter,
 } from "lucide-react";
-import {
-  adminDb,
-  getReadableAdminDbError,
-} from "@/services/adminDbService";
+import { adminDb, getReadableAdminDbError } from "@/services/adminDbService";
 import { Product, Category, ProductStatus } from "@/types/types";
 
 const STATUS_LABELS: Record<ProductStatus | "all", string> = {

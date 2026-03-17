@@ -753,9 +753,8 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
   useEffect(() => {
     const init = async () => {
       try {
-        const { categories: cats, product } = await adminLoadProductEditorData(
-          productId,
-        );
+        const { categories: cats, product } =
+          await adminLoadProductEditorData(productId);
         setCategories(cats);
         if (!productId && cats.length > 0) {
           setForm((prev) => ({
@@ -1101,7 +1100,7 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
         // Patch thumbnail on the product row only when it differs (rare: only if
         // background upload had not yet resolved before buildWriteData ran).
         thumbUrl && thumbUrl !== data.thumbnailUrl
-            ? adminDb.updateProduct(id, { ...data, thumbnailUrl: thumbUrl })
+          ? adminDb.updateProduct(id, { ...data, thumbnailUrl: thumbUrl })
           : Promise.resolve(),
       ]);
 
