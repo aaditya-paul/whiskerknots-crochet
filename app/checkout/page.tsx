@@ -62,7 +62,7 @@ function CheckoutPage() {
   const total = subtotal + shipping + tax;
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -465,7 +465,10 @@ function CheckoutPage() {
                   <div key={item.id} className="flex gap-3">
                     <div className="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
                       <Image
-                        src={item.image || "https://picsum.photos/seed/checkout-item/64/64"}
+                        src={
+                          item.image ||
+                          "https://picsum.photos/seed/checkout-item/64/64"
+                        }
                         alt={item.name}
                         width={64}
                         height={64}
