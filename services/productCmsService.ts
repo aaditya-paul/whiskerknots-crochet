@@ -27,8 +27,10 @@ export const getReadableSupabaseError = getReadableCmsError;
 
 const PRODUCTS_CACHE_TTL_MS = 15_000;
 const CATEGORIES_CACHE_TTL_MS = 60_000;
-const QUERY_TIMEOUT_MS = 12_000;
-const UPLOAD_TIMEOUT_MS = 60_000;
+// Keep JS timeout slightly above lib/supabase.ts hard abort values so
+// network requests are truly aborted before this Promise timeout fires.
+const QUERY_TIMEOUT_MS = 15_000;
+const UPLOAD_TIMEOUT_MS = 70_000;
 const RETRYABLE_ERROR_SUBSTRINGS = [
   "lock broken by another request",
   "request was aborted",

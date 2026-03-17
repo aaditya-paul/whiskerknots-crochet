@@ -4,10 +4,7 @@ const DEFAULT_PRODUCT_IMAGE = "https://picsum.photos/800/800";
 const PUBLIC_BUCKET_PATH = "/storage/v1/object/public/product-media/";
 
 const getSupabaseBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321").replace(
-    /\/$/,
-    "",
-  );
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
 
 export const normalizeProductImageUrl = (
   url?: string,
@@ -20,13 +17,19 @@ export const normalizeProductImageUrl = (
     }
 
     if (trimmedUrl.startsWith(PUBLIC_BUCKET_PATH)) {
-      return `${getSupabaseBaseUrl()}${trimmedUrl}`;
+      const supabaseBaseUrl = getSupabaseBaseUrl();
+      return supabaseBaseUrl ? `${supabaseBaseUrl}${trimmedUrl}` : trimmedUrl;
     }
   }
 
   const trimmedStoragePath = storagePath?.trim().replace(/^\/+/, "");
   if (trimmedStoragePath) {
-    return `${getSupabaseBaseUrl()}${PUBLIC_BUCKET_PATH}${trimmedStoragePath}`;
+    const supabaseBaseUrl = getSupabaseBaseUrl();
+    if (!supabaseBaseUrl) {
+      return undefined;
+    }
+
+    return `${supabaseBaseUrl}${PUBLIC_BUCKET_PATH}${trimmedStoragePath}`;
   }
 
   return undefined;

@@ -17,12 +17,9 @@ import {
   Filter,
 } from "lucide-react";
 import {
-  adminFetchProducts,
-  adminFetchCategories,
-  adminDeleteProduct,
-  adminUpdateProduct,
-  getReadableCmsError,
-} from "@/services/productCmsService";
+  adminDb,
+  getReadableAdminDbError,
+} from "@/services/adminDbService";
 import { Product, Category, ProductStatus } from "@/types/types";
 
 const STATUS_LABELS: Record<ProductStatus | "all", string> = {
@@ -63,14 +60,12 @@ export default function ProductsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [prods, cats] = await Promise.all([
-        adminFetchProducts(),
-        adminFetchCategories(),
-      ]);
+      const { products: prods, categories: cats } =
+        await adminDb.loadProductsPageData();
       setProducts(prods);
       setCategories(cats);
     } catch (err) {
-      setError(getReadableCmsError(err));
+      setError(getReadableAdminDbError(err));
     } finally {
       setLoading(false);
     }
@@ -130,10 +125,10 @@ export default function ProductsPage() {
     if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     setDeleting(id);
     try {
-      await adminDeleteProduct(id);
+      await adminDb.deleteProduct(id);
       setProducts((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      alert(getReadableCmsError(err));
+      alert(getReadableAdminDbError(err));
     } finally {
       setDeleting(null);
     }
@@ -143,7 +138,7 @@ export default function ProductsPage() {
     const next: ProductStatus =
       product.status === "active" ? "draft" : "active";
     try {
-      await adminUpdateProduct(product.id, {
+      await adminDb.updateProduct(product.id, {
         name: product.name,
         slug: product.slug,
         description: product.description,
@@ -178,7 +173,7 @@ export default function ProductsPage() {
         prev.map((p) => (p.id === product.id ? { ...p, status: next } : p)),
       );
     } catch (err) {
-      alert(getReadableCmsError(err));
+      alert(getReadableAdminDbError(err));
     }
   };
 

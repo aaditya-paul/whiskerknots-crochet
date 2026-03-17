@@ -14,10 +14,9 @@ import {
   Clock,
 } from "lucide-react";
 import {
-  adminFetchProducts,
-  adminFetchCategories,
-  getReadableCmsError,
-} from "@/services/productCmsService";
+  adminLoadDashboardData,
+  getReadableAdminDbError,
+} from "@/services/adminDbService";
 import { Product, Category } from "@/types/types";
 
 function StatCard({
@@ -51,14 +50,28 @@ export default function AdminDashboard() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    Promise.all([adminFetchProducts(), adminFetchCategories()])
-      .then(([prods, cats]) => {
+    let isMounted = true;
+
+    adminLoadDashboardData()
+      .then(({ products: prods, categories: cats }) => {
+        if (!isMounted) return;
         setProducts(prods);
         setCategories(cats);
       })
-      .catch((err) => setError(getReadableCmsError(err)))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (!isMounted) return;
+        setError(getReadableAdminDbError(err));
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const active = products.filter((p) => p.status === "active").length;
