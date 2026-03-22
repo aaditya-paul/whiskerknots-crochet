@@ -9,12 +9,28 @@ import {
   CheckCircle,
   Package,
   Truck,
-  Heart,
   ArrowLeft,
 } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
-import { fadeInUp, staggerContainer } from "../../utils/animations";
+import { dbOrders, getReadableDbError } from "../../lib/db";
+import {
+  getProductPrimaryImage,
+  isUnoptimizedImageUrl,
+} from "../../utils/productImages";
+
+const buildOrderNumber = () => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  const random = Math.floor(Math.random() * 900 + 100);
+
+  return `WK-${yyyy}${mm}${dd}-${hh}${min}${ss}-${random}`;
+};
 
 function CheckoutPage() {
   const router = useRouter();
@@ -29,6 +45,10 @@ function CheckoutPage() {
   }, [user, loading, router]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [placedOrderNumber, setPlacedOrderNumber] = useState<string | null>(
+    null,
+  );
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     // Contact Info
@@ -67,19 +87,71 @@ function CheckoutPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const placeOrder = async () => {
+    if (!user || items.length === 0 || isProcessing) return;
+
+    setIsProcessing(true);
+    setSubmitError(null);
+
+    try {
+      // Simulated payment step before creating order record.
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      const orderNumber = buildOrderNumber();
+      const notes = [
+        `Name: ${formData.firstName} ${formData.lastName}`,
+        `Address: ${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}, ${formData.country}`,
+        `Phone: ${formData.phone}`,
+        `Email: ${formData.email}`,
+      ].join("\n");
+
+      await dbOrders.create({
+        userId: user.uid,
+        orderNumber,
+        subtotalAmount: subtotal,
+        shippingAmount: shipping,
+        taxAmount: tax,
+        totalAmount: total,
+        shippingDetails: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          country: formData.country,
+          phone: formData.phone,
+          email: formData.email,
+        },
+        items: items.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          priceAtPurchase: item.price,
+          lineTotal: item.price * item.quantity,
+          productName: item.name,
+          productImageUrl: getProductPrimaryImage(item),
+          productVariantLabel:
+            typeof item.customFields?.selectedVariant === "string"
+              ? item.customFields.selectedVariant
+              : "Standard",
+        })),
+        notes,
+      });
+
+      setPlacedOrderNumber(orderNumber);
+      setOrderComplete(true);
+      clearCart();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      setSubmitError(getReadableDbError(error));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsProcessing(true);
-
-    // Simulate payment processing
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setIsProcessing(false);
-    setOrderComplete(true);
-    clearCart();
-
-    // Scroll to top to show success message
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    await placeOrder();
   };
 
   // Show loading state while checking auth
@@ -158,8 +230,7 @@ function CheckoutPage() {
 
           <div className="bg-warm-peach/20 rounded-2xl p-6 mb-8">
             <p className="text-sm text-gray-700">
-              <strong>Order Number:</strong> #WK-
-              {Math.floor(Math.random() * 100000)}
+              <strong>Order Number:</strong> {placedOrderNumber ?? "Processing"}
             </p>
           </div>
 
@@ -227,7 +298,17 @@ function CheckoutPage() {
             transition={{ duration: 0.6 }}
             className="lg:col-span-2 space-y-6"
           >
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form
+              id="checkout-form"
+              onSubmit={handleSubmit}
+              className="space-y-6"
+            >
+              {submitError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  Unable to place order: {submitError}
+                </div>
+              )}
+
               {/* Contact Information */}
               <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                 <h3 className="text-2xl font-bold text-earthy-brown mb-6">
@@ -359,10 +440,7 @@ function CheckoutPage() {
                   Payment Information
                 </h3>
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
-                  <Lock
-                    size={20}
-                    className="text-blue-500 flex-shrink-0 mt-0.5"
-                  />
+                  <Lock size={20} className="text-blue-500 shrink-0 mt-0.5" />
                   <p className="text-sm text-blue-700">
                     Your payment information is secure and encrypted. We never
                     store your card details.
@@ -461,36 +539,38 @@ function CheckoutPage() {
 
               {/* Items */}
               <div className="space-y-4 mb-6 max-h-60 overflow-y-auto">
-                {items.map((item) => (
-                  <div key={item.id} className="flex gap-3">
-                    <div className="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
-                      <Image
-                        src={
-                          item.image ||
-                          "https://picsum.photos/seed/checkout-item/64/64"
-                        }
-                        alt={item.name}
-                        width={64}
-                        height={64}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute -top-1 -right-1 bg-rose-400 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                        {item.quantity}
+                {items.map((item) => {
+                  const imageSrc = getProductPrimaryImage(item);
+
+                  return (
+                    <div key={item.id} className="flex gap-3">
+                      <div className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-gray-100">
+                        <Image
+                          src={imageSrc}
+                          alt={item.name}
+                          width={64}
+                          height={64}
+                          unoptimized={isUnoptimizedImageUrl(imageSrc)}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute -top-1 -right-1 bg-rose-400 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                          {item.quantity}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-gray-800 truncate">
+                          {item.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          ₹{item.price.toFixed(2)} each
+                        </p>
+                      </div>
+                      <div className="text-sm font-bold text-gray-800">
+                        ₹{(item.price * item.quantity).toFixed(2)}
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-gray-800 truncate">
-                        {item.name}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        ₹{item.price.toFixed(2)} each
-                      </p>
-                    </div>
-                    <div className="text-sm font-bold text-gray-800">
-                      ₹{(item.price * item.quantity).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Totals */}
@@ -522,7 +602,7 @@ function CheckoutPage() {
               {/* Submit Button (Desktop) */}
               <motion.button
                 type="submit"
-                onClick={handleSubmit}
+                form="checkout-form"
                 disabled={isProcessing}
                 whileHover={{ scale: isProcessing ? 1 : 1.02 }}
                 whileTap={{ scale: isProcessing ? 1 : 0.98 }}

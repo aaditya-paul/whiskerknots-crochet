@@ -11,10 +11,12 @@ import {
   User,
   LogOut,
   ChevronDown,
+  Package,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { normalizeProfileImage } from "../utils/productImages";
 
 const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -24,6 +26,7 @@ const Navbar: React.FC = () => {
   const { openCart, getCartCount } = useCart();
   const { user, logout } = useAuth();
   const [favoriteCount, setFavoriteCount] = useState(0);
+  const normalizedProfileImage = normalizeProfileImage(user?.photoURL);
   const cartCount = getCartCount();
 
   // Sync counts
@@ -177,7 +180,16 @@ const Navbar: React.FC = () => {
                     className="flex items-center gap-2 p-1 pr-3 bg-white border border-[#ffdab9] rounded-full hover:shadow-md transition-all"
                   >
                     <div className="w-8 h-8 bg-[#f4c2c2] rounded-full flex items-center justify-center text-white">
-                      <User size={16} />
+                      {normalizedProfileImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={normalizedProfileImage}
+                          alt={user.displayName || "Profile"}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <User size={16} />
+                      )}
                     </div>
                     <ChevronDown
                       size={14}
@@ -196,6 +208,20 @@ const Navbar: React.FC = () => {
                         className="absolute right-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-[#ffdab9]/30 overflow-hidden"
                       >
                         <div className="p-4 bg-[#fffdf7] border-b border-[#ffdab9]/20">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-9 h-9 rounded-full bg-[#f4c2c2] flex items-center justify-center text-white overflow-hidden">
+                              {normalizedProfileImage ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={normalizedProfileImage}
+                                  alt={user.displayName || "Profile"}
+                                  className="w-9 h-9 rounded-full object-cover"
+                                />
+                              ) : (
+                                <User size={16} />
+                              )}
+                            </div>
+                          </div>
                           <p className="font-bold text-[#8d6e63] text-sm truncate">
                             {user.displayName || "Maker"}
                           </p>
@@ -204,6 +230,14 @@ const Navbar: React.FC = () => {
                           </p>
                         </div>
                         <div className="p-2">
+                          <Link
+                            href="/orders"
+                            onClick={() => setShowUserMenu(false)}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-[#f4c2c2]/10 rounded-2xl transition-colors text-[#8d6e63] font-bold text-sm"
+                          >
+                            <Package size={18} className="text-[#f4c2c2]" />{" "}
+                            Orders
+                          </Link>
                           <Link
                             href="/profile"
                             onClick={() => setShowUserMenu(false)}

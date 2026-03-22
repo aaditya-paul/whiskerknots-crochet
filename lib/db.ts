@@ -1245,7 +1245,32 @@ const rowToOrder = (row: any): Order => ({
   userId: row.user_id,
   orderNumber: row.order_number,
   status: row.status,
+  subtotalAmount: Number(row.subtotal_amount ?? row.total_amount ?? 0),
+  shippingAmount: Number(row.shipping_amount ?? 0),
+  taxAmount: Number(row.tax_amount ?? 0),
   totalAmount: Number(row.total_amount),
+  shippingDetails:
+    row.shipping_first_name ||
+    row.shipping_last_name ||
+    row.shipping_address ||
+    row.shipping_city ||
+    row.shipping_state ||
+    row.shipping_zip_code ||
+    row.shipping_country ||
+    row.shipping_phone ||
+    row.shipping_email
+      ? {
+          firstName: row.shipping_first_name ?? "",
+          lastName: row.shipping_last_name ?? "",
+          address: row.shipping_address ?? "",
+          city: row.shipping_city ?? "",
+          state: row.shipping_state ?? "",
+          zipCode: row.shipping_zip_code ?? "",
+          country: row.shipping_country ?? "",
+          phone: row.shipping_phone ?? "",
+          email: row.shipping_email ?? "",
+        }
+      : undefined,
   notes: row.notes ?? undefined,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -1257,6 +1282,10 @@ const rowToOrder = (row: any): Order => ({
           product_id: string;
           quantity: number;
           price_at_purchase: number | string;
+          line_total: number | string | null;
+          product_name: string | null;
+          product_image_url: string | null;
+          product_variant_label: string | null;
           created_at: string;
         }) => ({
           id: item.id,
@@ -1264,6 +1293,12 @@ const rowToOrder = (row: any): Order => ({
           productId: item.product_id,
           quantity: item.quantity,
           priceAtPurchase: Number(item.price_at_purchase),
+          lineTotal: Number(
+            item.line_total ?? item.quantity * Number(item.price_at_purchase),
+          ),
+          productName: item.product_name ?? "Product",
+          productImageUrl: item.product_image_url ?? undefined,
+          productVariantLabel: item.product_variant_label ?? "Standard",
           createdAt: item.created_at,
         }),
       )
@@ -1309,9 +1344,14 @@ export const dbOrders = {
         .from("orders")
         .select(
           `
-          id, user_id, order_number, status, total_amount, notes,
+          id, user_id, order_number, status,
+          subtotal_amount, shipping_amount, tax_amount, total_amount,
+          shipping_first_name, shipping_last_name, shipping_address,
+          shipping_city, shipping_state, shipping_zip_code,
+          shipping_country, shipping_phone, shipping_email,
+          notes,
           created_at, updated_at,
-          items:order_items(id, order_id, product_id, quantity, price_at_purchase, created_at)
+          items:order_items(id, order_id, product_id, quantity, price_at_purchase, line_total, product_name, product_image_url, product_variant_label, created_at)
         `,
         )
         .eq("user_id", userId)
@@ -1327,11 +1367,29 @@ export const dbOrders = {
   create: async (order: {
     userId: string;
     orderNumber: string;
+    subtotalAmount: number;
+    shippingAmount: number;
+    taxAmount: number;
     totalAmount: number;
+    shippingDetails: {
+      firstName: string;
+      lastName: string;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+      phone: string;
+      email: string;
+    };
     items: Array<{
       productId: string;
       quantity: number;
       priceAtPurchase: number;
+      lineTotal: number;
+      productName: string;
+      productImageUrl?: string;
+      productVariantLabel?: string;
     }>;
     notes?: string;
   }): Promise<string> => {
@@ -1341,7 +1399,19 @@ export const dbOrders = {
         .insert({
           user_id: order.userId,
           order_number: order.orderNumber,
+          subtotal_amount: order.subtotalAmount,
+          shipping_amount: order.shippingAmount,
+          tax_amount: order.taxAmount,
           total_amount: order.totalAmount,
+          shipping_first_name: order.shippingDetails.firstName,
+          shipping_last_name: order.shippingDetails.lastName,
+          shipping_address: order.shippingDetails.address,
+          shipping_city: order.shippingDetails.city,
+          shipping_state: order.shippingDetails.state,
+          shipping_zip_code: order.shippingDetails.zipCode,
+          shipping_country: order.shippingDetails.country,
+          shipping_phone: order.shippingDetails.phone,
+          shipping_email: order.shippingDetails.email,
           notes: order.notes ?? null,
           status: "completed",
         })
@@ -1361,6 +1431,10 @@ export const dbOrders = {
             product_id: item.productId,
             quantity: item.quantity,
             price_at_purchase: item.priceAtPurchase,
+            line_total: item.lineTotal,
+            product_name: item.productName,
+            product_image_url: item.productImageUrl ?? null,
+            product_variant_label: item.productVariantLabel ?? "Standard",
           })),
         ),
       );

@@ -150,7 +150,23 @@ export interface OrderItem {
   productId: string;
   quantity: number;
   priceAtPurchase: number;
+  lineTotal: number;
+  productName: string;
+  productImageUrl?: string;
+  productVariantLabel?: string;
   createdAt: string;
+}
+
+export interface OrderShippingDetails {
+  firstName: string;
+  lastName: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone: string;
+  email: string;
 }
 
 export interface Order {
@@ -158,7 +174,11 @@ export interface Order {
   userId: string;
   orderNumber: string;
   status: OrderStatus;
+  subtotalAmount: number;
+  shippingAmount: number;
+  taxAmount: number;
   totalAmount: number;
+  shippingDetails?: OrderShippingDetails;
   notes?: string;
   createdAt: string;
   updatedAt: string;

@@ -203,10 +203,15 @@ function ProductPage() {
               </div>
             )}
 
-            <RatingDisplay reviews={reviews} summary={ratingSummary ?? undefined} />
+            <RatingDisplay
+              reviews={reviews}
+              summary={ratingSummary ?? undefined}
+            />
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold text-gray-700">Filter:</span>
+              <span className="text-sm font-semibold text-gray-700">
+                Filter:
+              </span>
               {RATING_FILTER_OPTIONS.map((option) => {
                 const isActive = ratingFilter === option;
                 return (

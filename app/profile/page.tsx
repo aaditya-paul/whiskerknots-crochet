@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
+import { dbOrders, getReadableDbError } from "../../lib/db";
 import { fadeInUp, staggerContainer } from "../../utils/animations";
 import { isUnoptimizedImageUrl } from "../../utils/productImages";
 
@@ -40,8 +41,10 @@ function ProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
+  const [orderCount, setOrderCount] = useState(0);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
 
   const helpItems = [
     { id: 1, label: "Care Instructions", link: "/care" },
@@ -61,6 +64,33 @@ function ProfilePage() {
     const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
     setFavoriteCount(favorites.length);
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let cancelled = false;
+
+    const loadOrders = async () => {
+      try {
+        const orders = await dbOrders.fetchByUserId(user.uid);
+        if (!cancelled) {
+          setOrderCount(orders.length);
+          setOrdersError(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setOrderCount(0);
+          setOrdersError(getReadableDbError(error));
+        }
+      }
+    };
+
+    void loadOrders();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -344,30 +374,56 @@ function ProfilePage() {
                 },
                 {
                   label: "Orders",
-                  val: 0,
+                  val: orderCount,
                   icon: Package,
                   color: "bg-[#a5d6a7]",
                   text: "text-[#2f2e33]",
+                  href: "/orders",
                 },
-              ].map((stat, i) => (
-                <div
-                  key={i}
-                  className={`${stat.color} p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center shadow-lg relative group overflow-hidden`}
-                >
-                  <stat.icon className="absolute -top-2 -right-2 w-12 h-12 md:w-16 md:h-16 opacity-10" />
-                  <p
-                    className={`text-3xl md:text-4xl font-serif font-bold ${stat.text}`}
+              ].map((stat, i) => {
+                const cardContent = (
+                  <>
+                    <stat.icon className="absolute -top-2 -right-2 w-12 h-12 md:w-16 md:h-16 opacity-10" />
+                    <p
+                      className={`text-3xl md:text-4xl font-serif font-bold ${stat.text}`}
+                    >
+                      {stat.val}
+                    </p>
+                    <p
+                      className={`text-[10px] font-bold uppercase tracking-widest mt-1 md:mt-2 ${stat.text} opacity-80`}
+                    >
+                      {stat.label}
+                    </p>
+                  </>
+                );
+
+                if (stat.href) {
+                  return (
+                    <Link
+                      key={i}
+                      href={stat.href}
+                      className={`${stat.color} p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center shadow-lg relative group overflow-hidden hover:scale-[1.02] transition-transform`}
+                    >
+                      {cardContent}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div
+                    key={i}
+                    className={`${stat.color} p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center justify-center shadow-lg relative group overflow-hidden`}
                   >
-                    {stat.val}
-                  </p>
-                  <p
-                    className={`text-[10px] font-bold uppercase tracking-widest mt-1 md:mt-2 ${stat.text} opacity-80`}
-                  >
-                    {stat.label}
-                  </p>
-                </div>
-              ))}
+                    {cardContent}
+                  </div>
+                );
+              })}
             </motion.div>
+            {ordersError && (
+              <p className="text-xs text-red-500 mt-2">
+                Could not load order count: {ordersError}
+              </p>
+            )}
           </div>
 
           {/* Right Column Sidebar */}
@@ -395,6 +451,28 @@ function ProfilePage() {
                 </Link>
               </div>
               <Heart className="absolute -bottom-10 -left-10 w-32 h-32 md:w-40 md:h-40 text-white/5 rotate-12" />
+            </motion.div>
+
+            <motion.div
+              variants={fadeInUp}
+              className="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] shadow-xl border border-[#ffdab9]/30"
+            >
+              <h3 className="text-lg font-serif font-bold text-[#8d6e63] mb-3 md:mb-4">
+                Your Orders
+              </h3>
+              <p className="text-xs md:text-sm text-[#8d6e63]/70 mb-5">
+                View your completed orders and order history in one place.
+              </p>
+              <Link
+                href="/orders"
+                className="inline-flex items-center justify-center gap-3 bg-[#f4c2c2] hover:bg-white hover:text-[#f4c2c2] border border-transparent hover:border-[#f4c2c2] transition-all px-6 py-3 md:py-4 rounded-2xl font-bold group w-full"
+              >
+                Open Orders
+                <ArrowRight
+                  size={18}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
+              </Link>
             </motion.div>
 
             <motion.div

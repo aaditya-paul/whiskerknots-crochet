@@ -58,7 +58,8 @@ export default function AddReviewForm({
         title: title.trim() || undefined,
         content: content.trim() || undefined,
         verifiedPurchase: true,
-        reviewerName: user!.displayName ?? user!.email?.split("@")[0] ?? "Customer",
+        reviewerName:
+          user!.displayName ?? user!.email?.split("@")[0] ?? "Customer",
         reviewerPhotoUrl: user!.photoURL ?? undefined,
       });
 
