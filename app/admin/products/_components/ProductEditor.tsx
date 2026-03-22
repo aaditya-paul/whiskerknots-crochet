@@ -1358,39 +1358,6 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
               <Plus size={14} /> Add field
             </button>
           </Section>
-          {/* Live Storefront Preview */}
-          <Section title="Live Storefront Preview" defaultOpen>
-            <p className="text-xs text-gray-500">
-              Instant preview of how this product will look in the shop card and
-              product detail page.
-            </p>
-
-            <div className="grid gap-4">
-              <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
-                <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500">
-                  Product Card Preview (Real Component)
-                </div>
-                <div className="p-3 max-w-sm pointer-events-none">
-                  <ProductCard product={previewProduct} />
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
-                <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500">
-                  Product Page Preview (Real Component)
-                </div>
-                <div className="px-3 pt-3 pb-1">
-                  <p className="text-xs text-gray-500 mb-3">
-                    Gallery slots used: {previewGallery.length}/
-                    {MAX_PRODUCT_IMAGES}
-                  </p>
-                </div>
-                <div className="max-h-225 overflow-y-auto border-t border-gray-100">
-                  <ProductDetailView product={previewProduct} previewMode />
-                </div>
-              </div>
-            </div>
-          </Section>
         </div>
 
         {/* ── Right sidebar ── */}
@@ -1668,6 +1635,41 @@ export default function ProductEditor({ productId }: ProductEditorProps) {
             </Field>
           </div>
         </div>
+      </div>
+      <div>
+        {/* Live Storefront Preview */}
+        <Section title="Live Storefront Preview" defaultOpen>
+          <p className="text-xs text-gray-500">
+            Instant preview of how this product will look in the shop card and
+            product detail page.
+          </p>
+
+          <div className="grid gap-4">
+            <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
+              <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500">
+                Product Card Preview
+              </div>
+              <div className="p-3 max-w-sm pointer-events-none">
+                <ProductCard product={previewProduct} />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
+              <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500">
+                Product Page Preview
+              </div>
+              <div className="px-3 pt-3 pb-1">
+                <p className="text-xs text-gray-500 mb-3">
+                  Gallery slots used: {previewGallery.length}/
+                  {MAX_PRODUCT_IMAGES}
+                </p>
+              </div>
+              <div className="max-h-225 overflow-y-auto border-t border-gray-100">
+                <ProductDetailView product={previewProduct} previewMode />
+              </div>
+            </div>
+          </div>
+        </Section>
       </div>
     </form>
   );

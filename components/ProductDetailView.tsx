@@ -368,27 +368,23 @@ export default function ProductDetailView({
             </div>
 
             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-3">
-              <h3 className="font-bold text-earthy-brown">Product Details</h3>
+              <h3 className="font-bold text-earthy-brown">Good to Know</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <p className="text-gray-700">
-                  <span className="font-semibold text-gray-500">SKU:</span>{" "}
-                  {product.sku || "Not specified"}
+                  <span className="font-semibold text-gray-500">Best for:</span>{" "}
+                  {product.category?.name || "Everyday gifting"}
                 </p>
                 <p className="text-gray-700">
-                  <span className="font-semibold text-gray-500">Barcode:</span>{" "}
-                  {product.barcode || "Not specified"}
-                </p>
-                <p className="text-gray-700">
-                  <span className="font-semibold text-gray-500">Category:</span>{" "}
-                  {product.category?.name || "Uncategorized"}
-                </p>
-                <p className="text-gray-700">
-                  <span className="font-semibold text-gray-500">Status:</span>{" "}
-                  {product.status}
+                  <span className="font-semibold text-gray-500">
+                    Availability:
+                  </span>{" "}
+                  {stockStatus}
                 </p>
                 {typeof product.weight === "number" && (
                   <p className="text-gray-700">
-                    <span className="font-semibold text-gray-500">Weight:</span>{" "}
+                    <span className="font-semibold text-gray-500">
+                      Approx weight:
+                    </span>{" "}
                     {product.weight} {product.weightUnit || "g"}
                   </p>
                 )}
@@ -397,7 +393,7 @@ export default function ProductDetailView({
                   typeof product.height === "number") && (
                   <p className="text-gray-700">
                     <span className="font-semibold text-gray-500">
-                      Dimensions:
+                      Approx size:
                     </span>{" "}
                     {product.length ?? "-"} x {product.width ?? "-"} x{" "}
                     {product.height ?? "-"} {product.dimensionUnit || "cm"}
