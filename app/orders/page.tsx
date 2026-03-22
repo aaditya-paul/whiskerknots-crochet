@@ -126,7 +126,9 @@ function OrdersPage() {
                       </p>
                       <div className="mt-1 flex items-center gap-2 text-sm text-gray-600">
                         <CalendarDays size={14} />
-                        <span>{new Date(order.createdAt).toLocaleString()}</span>
+                        <span>
+                          {new Date(order.createdAt).toLocaleString()}
+                        </span>
                       </div>
                     </div>
 
@@ -145,11 +147,14 @@ function OrdersPage() {
 
                   <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
                     <div className="text-sm text-gray-700 font-medium">
-                      {quantityCount} item{quantityCount !== 1 ? "s" : ""} in this order
+                      {quantityCount} item{quantityCount !== 1 ? "s" : ""} in
+                      this order
                     </div>
 
                     {(order.items ?? []).map((item) => {
-                      const imageUrl = normalizeProductImageUrl(item.productImageUrl);
+                      const imageUrl = normalizeProductImageUrl(
+                        item.productImageUrl,
+                      );
 
                       return (
                         <div
@@ -178,7 +183,9 @@ function OrdersPage() {
                             </p>
                             <div className="mt-2 text-sm text-gray-700 flex flex-wrap gap-x-4 gap-y-1">
                               <span>Qty: {item.quantity}</span>
-                              <span>Unit: ₹{item.priceAtPurchase.toFixed(2)}</span>
+                              <span>
+                                Unit: ₹{item.priceAtPurchase.toFixed(2)}
+                              </span>
                               <span className="font-semibold">
                                 Line total: ₹{item.lineTotal.toFixed(2)}
                               </span>
@@ -189,7 +196,9 @@ function OrdersPage() {
                     })}
 
                     <div className="rounded-2xl bg-cozy-cream p-4 text-sm text-gray-700 space-y-1">
-                      <p className="font-semibold text-earthy-brown">Shipping Details</p>
+                      <p className="font-semibold text-earthy-brown">
+                        Shipping Details
+                      </p>
                       <p>
                         {order.shippingDetails
                           ? `${order.shippingDetails.firstName} ${order.shippingDetails.lastName}`
@@ -207,7 +216,9 @@ function OrdersPage() {
                     </div>
 
                     <div className="rounded-2xl border border-gray-100 p-4 text-sm text-gray-700 space-y-1">
-                      <p className="font-semibold text-earthy-brown">Pricing Breakdown</p>
+                      <p className="font-semibold text-earthy-brown">
+                        Pricing Breakdown
+                      </p>
                       <div className="flex justify-between">
                         <span>Subtotal</span>
                         <span>₹{order.subtotalAmount.toFixed(2)}</span>
