@@ -166,7 +166,9 @@ function OrdersPage() {
                       <ChevronDown
                         size={18}
                         className={`text-gray-500 transition-transform ${
-                          expandedOrderId === order.id ? "rotate-180" : "rotate-0"
+                          expandedOrderId === order.id
+                            ? "rotate-180"
+                            : "rotate-0"
                         }`}
                       />
                     </div>
@@ -182,7 +184,8 @@ function OrdersPage() {
                         className="px-6 pb-6 border-t border-gray-100 space-y-4"
                       >
                         <div className="pt-4 text-sm text-gray-700 font-medium">
-                          {quantityCount} item{quantityCount !== 1 ? "s" : ""} in this order
+                          {quantityCount} item{quantityCount !== 1 ? "s" : ""}{" "}
+                          in this order
                         </div>
 
                         {(order.items ?? []).map((item) => {
@@ -202,7 +205,9 @@ function OrdersPage() {
                                     alt={item.productName}
                                     width={64}
                                     height={64}
-                                    unoptimized={isUnoptimizedImageUrl(imageUrl)}
+                                    unoptimized={isUnoptimizedImageUrl(
+                                      imageUrl,
+                                    )}
                                     className="w-full h-full object-cover"
                                   />
                                 ) : null}
@@ -213,7 +218,8 @@ function OrdersPage() {
                                   {item.productName}
                                 </p>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                  Variant: {item.productVariantLabel || "Standard"}
+                                  Variant:{" "}
+                                  {item.productVariantLabel || "Standard"}
                                 </p>
                                 <div className="mt-2 text-sm text-gray-700 flex flex-wrap gap-x-4 gap-y-1">
                                   <span>Qty: {item.quantity}</span>
