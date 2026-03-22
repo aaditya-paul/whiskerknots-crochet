@@ -23,6 +23,22 @@ const CartDrawer: React.FC = () => {
   } = useCart();
   const router = useRouter();
 
+  React.useEffect(() => {
+    if (!isCartOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeCart();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCartOpen, closeCart]);
+
   const handleCheckout = () => {
     closeCart();
     router.push("/checkout");

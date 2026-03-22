@@ -56,6 +56,22 @@ const FavoritesDrawer: React.FC = () => {
     };
   }, [products]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
   const handleRemoveFavorite = (productId: string) => {
     const favoriteIds = JSON.parse(localStorage.getItem("favorites") || "[]");
     const updatedFavorites = favoriteIds.filter(

@@ -10,7 +10,7 @@ const Footer: React.FC = () => {
   const router = useRouter();
   const { categories } = useProducts();
 
-  const featuredCategoryLinks = categories.slice(0, 3);
+  const featuredCategoryLinks = categories.slice(0, 4);
   return (
     <motion.footer
       initial={{ opacity: 0 }}

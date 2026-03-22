@@ -60,7 +60,7 @@ function CheckoutPage() {
     city: "",
     state: "",
     zipCode: "",
-    country: "United States",
+    country: "",
     phone: "",
     // Payment Info
     cardNumber: "",
@@ -413,6 +413,19 @@ function CheckoutPage() {
                       name="zipCode"
                       required
                       value={formData.zipCode}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-200 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Country
+                    </label>
+                    <input
+                      type="text"
+                      name="country"
+                      required
+                      value={formData.country}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-200 transition-all"
                     />
