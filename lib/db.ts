@@ -5,7 +5,10 @@ import {
   ProductImage,
   ProductVariant,
 } from "../types/types";
-import { normalizeProductImageUrl } from "../utils/productImages";
+import {
+  normalizeProductImageUrl,
+  normalizeProfileImage,
+} from "../utils/productImages";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabasePublishableKey =
@@ -63,7 +66,8 @@ const PRODUCT_SELECT_WITH_VARIANTS =
   variants:product_variants(id, product_id, name, sku, price, compare_at_price, quantity, in_stock, image_url, attributes, sort_order, created_at)
 `;
 
-const BUCKET = "product-media";
+const PRODUCT_MEDIA_BUCKET = "product-media";
+const PROFILE_MEDIA_BUCKET = "profile-media";
 
 let productsCache: { data: Product[]; timestamp: number } | null = null;
 let categoriesCache: { data: Category[]; timestamp: number } | null = null;
@@ -727,7 +731,7 @@ export const adminUploadImage = async (
   const storagePath = `products/${productId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
 
   const { error } = await withTimeout(
-    supabase.storage.from(BUCKET).upload(storagePath, file, {
+    supabase.storage.from(PRODUCT_MEDIA_BUCKET).upload(storagePath, file, {
       contentType: file.type,
       upsert: false,
     }),
@@ -737,7 +741,7 @@ export const adminUploadImage = async (
   if (error) throw error;
 
   const { data: urlData } = supabase.storage
-    .from(BUCKET)
+    .from(PRODUCT_MEDIA_BUCKET)
     .getPublicUrl(storagePath);
   return { url: urlData.publicUrl, storagePath };
 };
@@ -746,7 +750,7 @@ export const adminDeleteImageFromStorage = async (
   storagePath: string,
 ): Promise<void> => {
   const { error } = await withTimeout(
-    supabase.storage.from(BUCKET).remove([storagePath]),
+    supabase.storage.from(PRODUCT_MEDIA_BUCKET).remove([storagePath]),
   );
 
   if (error) throw error;
@@ -853,6 +857,20 @@ export const dbAuth = {
         full_name: displayName,
       },
     }),
+  updateUserProfile: (profile: {
+    displayName?: string | null;
+    photoURL?: string | null;
+  }) =>
+    supabase.auth.updateUser({
+      data: {
+        ...(profile.displayName !== undefined
+          ? { full_name: profile.displayName }
+          : {}),
+        ...(profile.photoURL !== undefined
+          ? { avatar_url: profile.photoURL }
+          : {}),
+      },
+    }),
 };
 
 export const dbProfiles = {
@@ -868,7 +886,25 @@ export const dbProfiles = {
       throw error;
     }
 
-    return data as DbProfile;
+    const profile = data as DbProfile;
+    return {
+      ...profile,
+      photo_url: normalizeProfileImage(profile.photo_url) ?? null,
+    };
+  },
+  fetchProfileImageByUserId: async (userId: string): Promise<string | null> => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("photo_url")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") return null;
+      throw error;
+    }
+
+    return normalizeProfileImage(data.photo_url) ?? null;
   },
   upsert: async (profile: {
     id: string;
@@ -882,7 +918,7 @@ export const dbProfiles = {
         id: profile.id,
         email: profile.email,
         display_name: profile.displayName,
-        photo_url: profile.photoUrl,
+        photo_url: normalizeProfileImage(profile.photoUrl) ?? null,
         created_at: profile.createdAt,
       },
       {
@@ -891,6 +927,51 @@ export const dbProfiles = {
     );
 
     if (error) throw error;
+  },
+  uploadPhoto: async (userId: string, file: File): Promise<string> => {
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const storagePath = `avatars/${userId}/avatar_${Date.now()}.${ext}`;
+
+    const candidateBuckets = [PROFILE_MEDIA_BUCKET, PRODUCT_MEDIA_BUCKET];
+    let lastError: unknown = null;
+
+    for (const bucket of candidateBuckets) {
+      const { error } = await withTimeout(
+        supabase.storage.from(bucket).upload(storagePath, file, {
+          contentType: file.type,
+          upsert: true,
+        }),
+        UPLOAD_TIMEOUT_MS,
+      );
+
+      if (!error) {
+        const { data: urlData } = supabase.storage
+          .from(bucket)
+          .getPublicUrl(storagePath);
+
+        return normalizeProfileImage(urlData.publicUrl) ?? urlData.publicUrl;
+      }
+
+      lastError = error;
+
+      const message =
+        typeof error === "object" && error && "message" in error
+          ? String((error as { message?: unknown }).message ?? "")
+          : "";
+
+      const isBucketMissing = /bucket\s+not\s+found/i.test(message);
+      if (!isBucketMissing) {
+        throw error;
+      }
+    }
+
+    if (lastError) {
+      throw new Error(
+        "Profile image upload failed because no storage bucket is available. Please run Supabase migrations and try again.",
+      );
+    }
+
+    throw new Error("Profile image upload failed.");
   },
 };
 

@@ -1,6 +1,6 @@
 "use client";
 import React, { useMemo } from "react";
-import ProductCard from "../../components/ProductCard";
+import ProductCard, { ProductCardSkeleton } from "../../components/ProductCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeInUp, staggerContainer } from "../../utils/animations";
@@ -76,9 +76,22 @@ const Shop: React.FC = () => {
       {/* Product grid */}
       <div className="min-h-100">
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="w-10 h-10 border-4 border-rose-400 border-t-transparent rounded-full animate-spin" />
-          </div>
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          >
+            {Array.from({ length: 6 }).map((_, index) => (
+              <motion.div
+                key={`shop-skeleton-${index}`}
+                variants={fadeInUp}
+                transition={{ delay: index * 0.05 }}
+              >
+                <ProductCardSkeleton />
+              </motion.div>
+            ))}
+          </motion.div>
         ) : error ? (
           <motion.div
             initial={{ opacity: 0 }}

@@ -7,6 +7,7 @@ import React, {
   ReactNode,
 } from "react";
 import { dbAuth, dbProfiles, dbUserState } from "../lib/db";
+import { normalizeProfileImage } from "../utils/productImages";
 
 const AUTH_INIT_TIMEOUT_MS = 12_000;
 
@@ -36,7 +37,11 @@ interface AuthContextType {
   ) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateUserProfile: (displayName: string) => Promise<void>;
+  updateUserProfile: (updates: {
+    displayName?: string;
+    photoURL?: string;
+  }) => Promise<void>;
+  uploadProfilePhoto: (file: File) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,7 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         uid: profileData.id,
         email: profileData.email || authUser.email || "",
         displayName: profileData.display_name,
-        photoURL: profileData.photo_url,
+        photoURL: normalizeProfileImage(profileData.photo_url) ?? null,
         createdAt: profileData.created_at || new Date().toISOString(),
       };
 
@@ -112,7 +117,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       uid: source.id,
       email: source.email || null,
       displayName: source.user_metadata?.full_name || null,
-      photoURL: source.user_metadata?.avatar_url || null,
+      photoURL: normalizeProfileImage(source.user_metadata?.avatar_url) || null,
     };
   };
 
@@ -283,11 +288,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setUserProfile(null);
   };
 
-  const updateUserProfile = async (displayName: string) => {
+  const updateUserProfile = async (updates: {
+    displayName?: string;
+    photoURL?: string;
+  }) => {
     if (!user) return;
 
-    const { error: authError } =
-      await dbAuth.updateUserDisplayName(displayName);
+    const displayName = updates.displayName ?? userProfile?.displayName ?? null;
+    const photoURL =
+      normalizeProfileImage(updates.photoURL) ?? userProfile?.photoURL ?? null;
+
+    const { error: authError } = await dbAuth.updateUserProfile({
+      displayName,
+      photoURL,
+    });
 
     if (authError) {
       throw authError;
@@ -297,12 +311,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       id: user.uid,
       email: user.email || "",
       displayName,
-      photoUrl: user.photoURL,
+      photoUrl: photoURL,
       createdAt: userProfile?.createdAt || new Date().toISOString(),
     });
 
-    setUserProfile((prev) => (prev ? { ...prev, displayName } : null));
-    setUser((prev) => (prev ? { ...prev, displayName } : null));
+    setUserProfile((prev) =>
+      prev ? { ...prev, displayName, photoURL } : null,
+    );
+    setUser((prev) => (prev ? { ...prev, displayName, photoURL } : null));
+  };
+
+  const uploadProfilePhoto = async (file: File) => {
+    if (!user) return;
+
+    const photoURL = await dbProfiles.uploadPhoto(user.uid, file);
+    await updateUserProfile({ photoURL });
   };
 
   return (
@@ -315,6 +338,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         login,
         logout,
         updateUserProfile,
+        uploadProfilePhoto,
       }}
     >
       {children}

@@ -19,15 +19,15 @@ import { useAuth } from "../context/AuthContext";
 const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = React.useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const { openCart, getCartCount } = useCart();
   const { user, logout } = useAuth();
-  const [cartCount, setCartCount] = useState(0);
   const [favoriteCount, setFavoriteCount] = useState(0);
+  const cartCount = getCartCount();
 
   // Sync counts
   useEffect(() => {
-    setCartCount(getCartCount());
     const updateFavs = () => {
       const favs = JSON.parse(localStorage.getItem("favorites") || "[]");
       setFavoriteCount(favs.length);
@@ -36,6 +36,31 @@ const Navbar: React.FC = () => {
     window.addEventListener("favoritesChanged", updateFavs);
     return () => window.removeEventListener("favoritesChanged", updateFavs);
   }, [getCartCount]);
+
+  useEffect(() => {
+    if (!showUserMenu) return;
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDocumentClick);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showUserMenu]);
 
   const handleLogout = async () => {
     await logout();
@@ -144,7 +169,7 @@ const Navbar: React.FC = () => {
             </motion.button>
 
             {/* Auth Menu */}
-            <div className="relative ml-2">
+            <div ref={userMenuRef} className="relative ml-2">
               {user ? (
                 <>
                   <button
@@ -181,6 +206,7 @@ const Navbar: React.FC = () => {
                         <div className="p-2">
                           <Link
                             href="/profile"
+                            onClick={() => setShowUserMenu(false)}
                             className="flex items-center gap-3 px-4 py-3 hover:bg-[#f4c2c2]/10 rounded-2xl transition-colors text-[#8d6e63] font-bold text-sm"
                           >
                             <User size={18} className="text-[#f4c2c2]" />{" "}

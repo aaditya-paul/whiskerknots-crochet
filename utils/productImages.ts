@@ -2,6 +2,7 @@ import { Product, ProductImage } from "../types/types";
 
 const DEFAULT_PRODUCT_IMAGE = "https://picsum.photos/800/800";
 const PUBLIC_BUCKET_PATH = "/storage/v1/object/public/product-media/";
+const PUBLIC_PROFILE_BUCKET_PATH = "/storage/v1/object/public/profile-media/";
 
 const getSupabaseBaseUrl = () =>
   process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
@@ -30,6 +31,35 @@ export const normalizeProductImageUrl = (
     }
 
     return `${supabaseBaseUrl}${PUBLIC_BUCKET_PATH}${trimmedStoragePath}`;
+  }
+
+  return undefined;
+};
+
+export const normalizeProfileImage = (
+  url?: string | null,
+  storagePath?: string | null,
+): string | undefined => {
+  const trimmedUrl = url?.trim();
+  if (trimmedUrl) {
+    if (/^https?:\/\//i.test(trimmedUrl)) {
+      return trimmedUrl;
+    }
+
+    if (trimmedUrl.startsWith(PUBLIC_PROFILE_BUCKET_PATH)) {
+      const supabaseBaseUrl = getSupabaseBaseUrl();
+      return supabaseBaseUrl ? `${supabaseBaseUrl}${trimmedUrl}` : trimmedUrl;
+    }
+  }
+
+  const trimmedStoragePath = storagePath?.trim().replace(/^\/+/, "");
+  if (trimmedStoragePath) {
+    const supabaseBaseUrl = getSupabaseBaseUrl();
+    if (!supabaseBaseUrl) {
+      return undefined;
+    }
+
+    return `${supabaseBaseUrl}${PUBLIC_PROFILE_BUCKET_PATH}${trimmedStoragePath}`;
   }
 
   return undefined;

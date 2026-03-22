@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
@@ -16,19 +17,31 @@ import {
   Calendar,
   Settings,
   ArrowRight,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { fadeInUp, staggerContainer } from "../../utils/animations";
+import { isUnoptimizedImageUrl } from "../../utils/productImages";
 
 function ProfilePage() {
   const router = useRouter();
-  const { user, userProfile, logout, updateUserProfile, loading } = useAuth();
+  const {
+    user,
+    userProfile,
+    logout,
+    updateUserProfile,
+    uploadProfilePhoto,
+    loading,
+  } = useAuth();
   const { items } = useCart();
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   const helpItems = [
     { id: 1, label: "Care Instructions", link: "/care" },
@@ -62,10 +75,46 @@ function ProfilePage() {
     if (!displayName.trim()) return;
     setIsSaving(true);
     try {
-      await updateUserProfile(displayName);
+      await updateUserProfile({ displayName: displayName.trim() });
       setIsEditing(false);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePhotoChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Please upload an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    const maxFileSize = 5 * 1024 * 1024;
+    if (file.size > maxFileSize) {
+      setPhotoError("Image must be 5MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+
+    setPhotoError(null);
+    setIsUploadingPhoto(true);
+
+    try {
+      await uploadProfilePhoto(file);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to upload profile photo. Please try again.";
+      setPhotoError(message);
+    } finally {
+      setIsUploadingPhoto(false);
+      event.target.value = "";
     }
   };
 
@@ -147,12 +196,36 @@ function ProfilePage() {
 
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 md:gap-6 mb-8 md:mb-10 text-center sm:text-left">
                 <div className="relative">
-                  <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-[#f4c2c2] to-[#ffdab9] rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-white shadow-inner">
-                    <User className="w-9 h-9 md:w-10 md:h-10" />
+                  <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-[#f4c2c2] to-[#ffdab9] rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center text-white shadow-inner overflow-hidden">
+                    {userProfile.photoURL ? (
+                      <Image
+                        src={userProfile.photoURL}
+                        alt={`${userProfile.displayName || "User"} profile picture`}
+                        width={96}
+                        height={96}
+                        unoptimized={isUnoptimizedImageUrl(
+                          userProfile.photoURL,
+                        )}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-9 h-9 md:w-10 md:h-10" />
+                    )}
                   </div>
-                  <button className="absolute -bottom-1 -right-1 bg-white p-2 rounded-xl shadow-md border border-[#ffdab9]/50 text-[#8d6e63] hover:text-[#f4c2c2] transition-colors">
-                    <Edit2 size={14} />
-                  </button>
+                  <label className="absolute -bottom-1 -right-1 bg-white p-2 rounded-xl shadow-md border border-[#ffdab9]/50 text-[#8d6e63] hover:text-[#f4c2c2] transition-colors cursor-pointer">
+                    {isUploadingPhoto ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Camera size={14} />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                      disabled={isUploadingPhoto}
+                    />
+                  </label>
                 </div>
                 <div className="pt-2">
                   <h2 className="text-xl md:text-2xl font-serif font-bold text-[#8d6e63]">
@@ -165,11 +238,14 @@ function ProfilePage() {
                       {userProfile?.createdAt
                         ? new Date(userProfile.createdAt).toLocaleDateString(
                             "en-US",
-                            { month: "long", year: "numeric" }
+                            { month: "long", year: "numeric" },
                           )
                         : "Recently"}
                     </span>
                   </div>
+                  {photoError ? (
+                    <p className="text-xs text-red-500 mt-2">{photoError}</p>
+                  ) : null}
                 </div>
               </div>
 

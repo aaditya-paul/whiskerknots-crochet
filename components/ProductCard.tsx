@@ -16,6 +16,24 @@ interface ProductCardProps {
   product: Product;
 }
 
+export const ProductCardSkeleton: React.FC = () => {
+  return (
+    <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 flex flex-col h-full relative animate-pulse">
+      <div className="relative overflow-hidden aspect-square bg-linear-to-br from-gray-200 via-gray-100 to-gray-200" />
+      <div className="p-6 flex flex-col grow">
+        <div className="h-6 w-3/4 rounded-lg bg-gray-200 mb-3" />
+        <div className="h-4 w-full rounded bg-gray-100 mb-2" />
+        <div className="h-4 w-5/6 rounded bg-gray-100 mb-6" />
+
+        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
+          <div className="h-7 w-20 rounded-lg bg-gray-200" />
+          <div className="h-10 w-24 rounded-xl bg-orange-100" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const { addToCart } = useCart();
@@ -23,6 +41,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [imageSrc, setImageSrc] = React.useState(() =>
     getProductPrimaryImage(product),
   );
+  const [imageLoaded, setImageLoaded] = React.useState(false);
 
   React.useEffect(() => {
     const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
@@ -31,6 +50,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   React.useEffect(() => {
     setImageSrc(getProductPrimaryImage(product));
+    setImageLoaded(false);
   }, [product]);
 
   const handleCardClick = () => {
@@ -78,8 +98,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           src={imageSrc}
           alt={product.name}
           unoptimized={isUnoptimizedImageUrl(imageSrc)}
-          onError={() => setImageSrc(DEFAULT_PRODUCT_IMAGE_URL)}
-          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+          onLoad={() => setImageLoaded(true)}
+          onError={() => {
+            setImageSrc(DEFAULT_PRODUCT_IMAGE_URL);
+            setImageLoaded(false);
+          }}
+          className={`w-full h-full object-cover transform transition-all duration-700 ${
+            imageLoaded
+              ? "group-hover:scale-110 blur-0"
+              : "scale-105 blur-md saturate-75"
+          }`}
         />
 
         {/* CHANGED SECTION: Always visible on mobile, hover on desktop */}

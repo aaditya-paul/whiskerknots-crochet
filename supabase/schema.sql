@@ -5,6 +5,8 @@
 -- reproduce the full schema, policies, triggers, and seed data.
 -- =============================================================
 
+BEGIN;
+
 
 -- =============================================================
 -- EXTENSIONS
@@ -157,6 +159,8 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+COMMIT;
 
 -- Shared updated_at function used by profiles and user_state.
 -- (Identical logic; kept as a separate symbol intentionally.)
@@ -371,6 +375,44 @@ CREATE POLICY "Public read product-media" ON storage.objects
 DROP POLICY IF EXISTS "Auth manage product-media" ON storage.objects;
 CREATE POLICY "Auth manage product-media" ON storage.objects
   FOR ALL USING (bucket_id = 'product-media' AND auth.role() = 'authenticated');
+
+-- Public bucket for profile photos.
+-- Users can upload/update/delete only their own avatar path.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('profile-media', 'profile-media', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public read profile-media" ON storage.objects;
+CREATE POLICY "Public read profile-media" ON storage.objects
+  FOR SELECT USING (bucket_id = 'profile-media');
+
+DROP POLICY IF EXISTS "Users upload own profile-media" ON storage.objects;
+CREATE POLICY "Users upload own profile-media" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'profile-media'
+    AND auth.uid()::text = (storage.foldername(name))[2]
+  );
+
+DROP POLICY IF EXISTS "Users update own profile-media" ON storage.objects;
+CREATE POLICY "Users update own profile-media" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (
+    bucket_id = 'profile-media'
+    AND auth.uid()::text = (storage.foldername(name))[2]
+  )
+  WITH CHECK (
+    bucket_id = 'profile-media'
+    AND auth.uid()::text = (storage.foldername(name))[2]
+  );
+
+DROP POLICY IF EXISTS "Users delete own profile-media" ON storage.objects;
+CREATE POLICY "Users delete own profile-media" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'profile-media'
+    AND auth.uid()::text = (storage.foldername(name))[2]
+  );
 
 
 -- =============================================================

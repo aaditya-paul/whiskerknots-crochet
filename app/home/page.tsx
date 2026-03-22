@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { ArrowRight, Star } from "lucide-react";
 import { TESTIMONIALS } from "../../constants/constants";
-import ProductCard from "../../components/ProductCard";
+import ProductCard, { ProductCardSkeleton } from "../../components/ProductCard";
 import type { Product, Testimonial } from "../../types/types";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -19,7 +19,7 @@ import {
 } from "../../utils/animations";
 
 function Home() {
-  const { products } = useProducts();
+  const { products, loading, error } = useProducts();
   const featuredProducts = products.filter((p) => p.isFeatured).slice(0, 3);
   const router = useRouter();
 
@@ -130,7 +130,7 @@ function Home() {
 
       {/* Featured Products */}
       <motion.section
-        initial="hidden"
+        initial="visible"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
         variants={fadeIn}
@@ -157,20 +157,41 @@ function Home() {
         <motion.div
           variants={staggerContainer}
           initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
+          animate="visible"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
         >
-          {featuredProducts.map((product: Product, index) => (
-            <motion.div
-              key={product.id}
-              variants={fadeInUp}
-              transition={{ delay: index * 0.1 }}
-            >
-              <ProductCard product={product} />
-            </motion.div>
-          ))}
+          {loading
+            ? Array.from({ length: 3 }).map((_, index) => (
+                <motion.div
+                  key={`featured-skeleton-${index}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <ProductCardSkeleton />
+                </motion.div>
+              ))
+            : featuredProducts.map((product: Product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <ProductCard product={product} />
+                </motion.div>
+              ))}
         </motion.div>
+
+        {!loading && error ? (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-6 text-center text-sm text-red-600"
+          >
+            {error}
+          </motion.p>
+        ) : null}
 
         <motion.div variants={fadeIn} className="mt-8 text-center md:hidden">
           <button
