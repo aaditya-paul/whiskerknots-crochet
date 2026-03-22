@@ -4,6 +4,8 @@ import {
   Product,
   ProductImage,
   ProductVariant,
+  ProductReview,
+  Order,
 } from "../types/types";
 import {
   normalizeProductImageUrl,
@@ -1040,4 +1042,332 @@ export const updateProductInCms = async (id: string, data: ProductWriteData) =>
   adminUpdateProduct(id, data);
 export const seedProductsToCms = async () => {
   // No longer needed. Add products via the admin panel.
+};
+
+// ─────────────────────────────────────────────────────────
+// REVIEWS & RATINGS
+// ─────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rowToReview = (row: any): ProductReview => ({
+  id: row.id,
+  productId: row.product_id,
+  userId: row.user_id,
+  rating: row.rating,
+  title: row.title ?? undefined,
+  content: row.content ?? undefined,
+  helpfulCount: row.helpful_count,
+  verifiedPurchase: row.verified_purchase,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+  reviewerName: row.reviewer_name ?? "Customer",
+  reviewerPhotoUrl: row.reviewer_photo_url ?? undefined,
+});
+
+export const dbReviews = {
+  fetchByProductId: async (
+    productId: string,
+    options?: {
+      page?: number;
+      pageSize?: number;
+      rating?: 1 | 2 | 3 | 4 | 5;
+    },
+  ): Promise<{ reviews: ProductReview[]; total: number }> => {
+    const page = Math.max(1, options?.page ?? 1);
+    const pageSize = Math.min(30, Math.max(1, options?.pageSize ?? 6));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
+      .from("product_reviews")
+      .select("*", { count: "exact" })
+      .eq("product_id", productId)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (options?.rating) {
+      query = query.eq("rating", options.rating);
+    }
+
+    const { data, error, count } = await withTimeout(query);
+
+    if (error) throw error;
+    return {
+      reviews: (data ?? []).map(rowToReview),
+      total: count ?? 0,
+    };
+  },
+
+  fetchSummaryByProductId: async (
+    productId: string,
+  ): Promise<{
+    average: number | null;
+    total: number;
+    distribution: Record<1 | 2 | 3 | 4 | 5, number>;
+  }> => {
+    const [fiveStar, fourStar, threeStar, twoStar, oneStar] = await Promise.all(
+      [5, 4, 3, 2, 1].map(async (rating) => {
+        const { count, error } = await withTimeout(
+          supabase
+            .from("product_reviews")
+            .select("id", { count: "exact", head: true })
+            .eq("product_id", productId)
+            .eq("rating", rating),
+        );
+
+        if (error) throw error;
+        return count ?? 0;
+      }),
+    );
+
+    const distribution: Record<1 | 2 | 3 | 4 | 5, number> = {
+      1: oneStar,
+      2: twoStar,
+      3: threeStar,
+      4: fourStar,
+      5: fiveStar,
+    };
+
+    const total = fiveStar + fourStar + threeStar + twoStar + oneStar;
+    if (total === 0) {
+      return {
+        average: null,
+        total: 0,
+        distribution,
+      };
+    }
+
+    const weightedSum =
+      5 * fiveStar + 4 * fourStar + 3 * threeStar + 2 * twoStar + 1 * oneStar;
+
+    return {
+      average: weightedSum / total,
+      total,
+      distribution,
+    };
+  },
+
+  fetchByProductAndUser: async (
+    productId: string,
+    userId: string,
+  ): Promise<ProductReview | null> => {
+    const { data, error } = await withTimeout(
+      supabase
+        .from("product_reviews")
+        .select("*")
+        .eq("product_id", productId)
+        .eq("user_id", userId)
+        .single(),
+    );
+
+    if (error) {
+      if (error.code === "PGRST116") return null;
+      throw error;
+    }
+
+    return rowToReview(data);
+  },
+
+  create: async (review: {
+    productId: string;
+    userId: string;
+    rating: number;
+    title?: string;
+    content?: string;
+    verifiedPurchase: boolean;
+    reviewerName?: string;
+    reviewerPhotoUrl?: string;
+  }): Promise<ProductReview> => {
+    const { data, error } = await withTimeout(
+      supabase
+        .from("product_reviews")
+        .insert({
+          product_id: review.productId,
+          user_id: review.userId,
+          rating: review.rating,
+          title: review.title ?? null,
+          content: review.content ?? null,
+          verified_purchase: review.verifiedPurchase,
+          reviewer_name: review.reviewerName ?? "Customer",
+          reviewer_photo_url: review.reviewerPhotoUrl ?? null,
+        })
+        .select("*")
+        .single(),
+    );
+
+    if (error) throw error;
+    return rowToReview(data);
+  },
+
+  update: async (
+    reviewId: string,
+    updates: {
+      rating?: number;
+      title?: string;
+      content?: string;
+    },
+  ): Promise<ProductReview> => {
+    const { data, error } = await withTimeout(
+      supabase
+        .from("product_reviews")
+        .update({
+          ...(updates.rating !== undefined && { rating: updates.rating }),
+          ...(updates.title !== undefined && { title: updates.title ?? null }),
+          ...(updates.content !== undefined && {
+            content: updates.content ?? null,
+          }),
+        })
+        .eq("id", reviewId)
+        .select("*")
+        .single(),
+    );
+
+    if (error) throw error;
+    return rowToReview(data);
+  },
+
+  delete: async (reviewId: string): Promise<void> => {
+    const { error } = await withTimeout(
+      supabase.from("product_reviews").delete().eq("id", reviewId),
+    );
+
+    if (error) throw error;
+  },
+};
+
+// ─────────────────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rowToOrder = (row: any): Order => ({
+  id: row.id,
+  userId: row.user_id,
+  orderNumber: row.order_number,
+  status: row.status,
+  totalAmount: Number(row.total_amount),
+  notes: row.notes ?? undefined,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+  items: Array.isArray(row.items)
+    ? row.items.map(
+        (item: {
+          id: string;
+          order_id: string;
+          product_id: string;
+          quantity: number;
+          price_at_purchase: number | string;
+          created_at: string;
+        }) => ({
+          id: item.id,
+          orderId: item.order_id,
+          productId: item.product_id,
+          quantity: item.quantity,
+          priceAtPurchase: Number(item.price_at_purchase),
+          createdAt: item.created_at,
+        }),
+      )
+    : undefined,
+});
+
+export const dbOrders = {
+  // Check if user purchased a specific product
+  userPurchasedProduct: async (
+    userId: string,
+    productId: string,
+  ): Promise<boolean> => {
+    const { data, error } = await withTimeout(
+      supabase
+        .from("orders")
+        .select(
+          `
+          id,
+          order_items!inner (
+            product_id
+          )
+        `,
+        )
+        .eq("user_id", userId)
+        .eq("order_items.product_id", productId)
+        .eq("status", "completed")
+        .limit(1)
+        .single(),
+    );
+
+    if (error) {
+      if (error.code === "PGRST116") return false;
+      throw error;
+    }
+
+    return !!data;
+  },
+
+  // Fetch all orders for a user
+  fetchByUserId: async (userId: string): Promise<Order[]> => {
+    const { data, error } = await withTimeout(
+      supabase
+        .from("orders")
+        .select(
+          `
+          id, user_id, order_number, status, total_amount, notes,
+          created_at, updated_at,
+          items:order_items(id, order_id, product_id, quantity, price_at_purchase, created_at)
+        `,
+        )
+        .eq("user_id", userId)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false }),
+    );
+
+    if (error) throw error;
+    return (data ?? []).map(rowToOrder);
+  },
+
+  // Create an order
+  create: async (order: {
+    userId: string;
+    orderNumber: string;
+    totalAmount: number;
+    items: Array<{
+      productId: string;
+      quantity: number;
+      priceAtPurchase: number;
+    }>;
+    notes?: string;
+  }): Promise<string> => {
+    const { data: orderData, error: orderError } = await withTimeout(
+      supabase
+        .from("orders")
+        .insert({
+          user_id: order.userId,
+          order_number: order.orderNumber,
+          total_amount: order.totalAmount,
+          notes: order.notes ?? null,
+          status: "completed",
+        })
+        .select("id")
+        .single(),
+    );
+
+    if (orderError) throw orderError;
+
+    const orderId = orderData.id;
+
+    if (order.items.length > 0) {
+      const { error: itemsError } = await withTimeout(
+        supabase.from("order_items").insert(
+          order.items.map((item) => ({
+            order_id: orderId,
+            product_id: item.productId,
+            quantity: item.quantity,
+            price_at_purchase: item.priceAtPurchase,
+          })),
+        ),
+      );
+
+      if (itemsError) throw itemsError;
+    }
+
+    return orderId;
+  },
 };

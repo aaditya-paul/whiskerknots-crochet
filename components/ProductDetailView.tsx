@@ -26,6 +26,10 @@ type ProductDetailViewProps = {
   product: Product;
   previewMode?: boolean;
   onNavigateCare?: () => void;
+  ratingSummary?: {
+    average: number | null;
+    count: number;
+  };
 };
 
 const formatVariantAttributes = (attributes: Record<string, string>) =>
@@ -38,6 +42,7 @@ export default function ProductDetailView({
   product,
   previewMode = false,
   onNavigateCare,
+  ratingSummary,
 }: ProductDetailViewProps) {
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
@@ -240,10 +245,18 @@ export default function ProductDetailView({
                   <Star
                     key={i}
                     size={20}
-                    className="text-sunny-yellow fill-sunny-yellow"
+                    className={`${
+                      i < Math.round(ratingSummary?.average ?? 0)
+                        ? "text-sunny-yellow fill-sunny-yellow"
+                        : "text-gray-300"
+                    }`}
                   />
                 ))}
-                <span className="text-gray-600 ml-2">(24 reviews)</span>
+                <span className="text-gray-600 ml-2">
+                  {ratingSummary?.count
+                    ? `(${ratingSummary.count} review${ratingSummary.count !== 1 ? "s" : ""})`
+                    : "(No reviews yet)"}
+                </span>
               </div>
               <div className="flex items-center gap-3">
                 <p className="text-3xl font-bold text-rose-400">

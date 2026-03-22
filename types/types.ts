@@ -122,3 +122,45 @@ export interface Testimonial {
   text: string;
   rating: number;
 }
+
+// ─── Reviews & Ratings ────────────────────────────────────────────────────────
+
+export interface ProductReview {
+  id: string;
+  productId: string;
+  userId: string;
+  rating: number;
+  title?: string;
+  content?: string;
+  helpfulCount: number;
+  verifiedPurchase: boolean;
+  createdAt: string;
+  updatedAt: string;
+  reviewerName: string;
+  reviewerPhotoUrl?: string;
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+export type OrderStatus = "pending" | "completed" | "shipped" | "cancelled";
+
+export interface OrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  quantity: number;
+  priceAtPurchase: number;
+  createdAt: string;
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  orderNumber: string;
+  status: OrderStatus;
+  totalAmount: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  items?: OrderItem[];
+}
