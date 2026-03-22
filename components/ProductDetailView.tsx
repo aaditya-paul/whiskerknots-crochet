@@ -48,8 +48,18 @@ export default function ProductDetailView({
 
   React.useEffect(() => {
     if (previewMode) return;
-    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
-    setIsFavorite(favorites.includes(product.id));
+
+    const syncFavoriteState = () => {
+      const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+      setIsFavorite(Array.isArray(favorites) && favorites.includes(product.id));
+    };
+
+    syncFavoriteState();
+    window.addEventListener("favoritesChanged", syncFavoriteState);
+
+    return () => {
+      window.removeEventListener("favoritesChanged", syncFavoriteState);
+    };
   }, [previewMode, product.id]);
 
   const productImages = getProductGalleryImages(product).slice(0, 5);
@@ -90,6 +100,7 @@ export default function ProductDetailView({
 
     localStorage.setItem("favorites", JSON.stringify(favorites));
     setIsFavorite(newFavoriteState);
+    window.dispatchEvent(new Event("favoritesChanged"));
     setShowFavoriteToast(true);
     setTimeout(() => setShowFavoriteToast(false), 2000);
   };

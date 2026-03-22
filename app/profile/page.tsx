@@ -156,7 +156,7 @@ function ProfilePage() {
         >
           <div className="text-center md:text-left">
             <span className="text-[#f4c2c2] font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] text-[10px] md:text-xs">
-              Member Dashboard
+              Member Profile
             </span>
             <h1 className="text-4xl md:text-6xl font-serif font-bold text-[#8d6e63] mt-2 leading-tight break-words">
               Hello,{" "}
@@ -252,7 +252,7 @@ function ProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#f4c2c2] ml-2">
-                    Display Name
+                    Full Name
                   </label>
                   <AnimatePresence mode="wait">
                     {isEditing ? (
@@ -307,7 +307,7 @@ function ProfilePage() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#f4c2c2] ml-2">
-                    Email Hook
+                    Email Address
                   </label>
                   <div className="flex items-center gap-3 p-4 md:p-5 bg-[#fffdf7] rounded-2xl border border-[#ffdab9]/20">
                     <Mail

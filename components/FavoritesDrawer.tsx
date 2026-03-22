@@ -7,6 +7,11 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../hooks/useProducts";
+import { sanitizeFavoriteIds } from "../utils/storeIntegrity";
+import {
+  getProductPrimaryImage,
+  isUnoptimizedImageUrl,
+} from "../utils/productImages";
 
 const FavoritesDrawer: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,7 +22,15 @@ const FavoritesDrawer: React.FC = () => {
 
   useEffect(() => {
     const loadFavorites = () => {
-      const favoriteIds = JSON.parse(localStorage.getItem("favorites") || "[]");
+      const favoriteIdsRaw = JSON.parse(
+        localStorage.getItem("favorites") || "[]",
+      );
+      const favoriteIds = sanitizeFavoriteIds(favoriteIdsRaw, products);
+
+      if (JSON.stringify(favoriteIdsRaw) !== JSON.stringify(favoriteIds)) {
+        localStorage.setItem("favorites", JSON.stringify(favoriteIds));
+      }
+
       const favoriteProducts = products.filter((product) =>
         favoriteIds.includes(product.id),
       );
@@ -54,6 +67,11 @@ const FavoritesDrawer: React.FC = () => {
   };
 
   const handleAddToCart = (product: Product) => {
+    if (product.status !== "active") {
+      handleRemoveFavorite(product.id);
+      return;
+    }
+
     addToCart(product, 1);
   };
 
@@ -145,13 +163,13 @@ const FavoritesDrawer: React.FC = () => {
                             className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 cursor-pointer"
                           >
                             <Image
-                              src={
-                                product.image ||
-                                "https://picsum.photos/seed/favorite-item/96/96"
-                              }
+                              src={getProductPrimaryImage(product)}
                               alt={product.name}
                               width={96}
                               height={96}
+                              unoptimized={isUnoptimizedImageUrl(
+                                getProductPrimaryImage(product),
+                              )}
                               className="w-full h-full object-cover"
                             />
                           </div>

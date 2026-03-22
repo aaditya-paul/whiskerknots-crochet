@@ -10,6 +10,11 @@ import React, {
 import { dbUserState, getReadableDbError } from "../lib/db";
 import { Product } from "../types/types";
 import { useAuth } from "./AuthContext";
+import { fetchProducts } from "../services/productCmsService";
+import {
+  sanitizeCartItems,
+  sanitizeFavoriteIds,
+} from "../utils/storeIntegrity";
 
 export interface CartItem extends Product {
   quantity: number;
@@ -46,9 +51,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
       const savedCart = localStorage.getItem("whiskerknots-cart");
       if (savedCart) {
         const parsed = JSON.parse(savedCart);
-        if (Array.isArray(parsed)) {
-          setItems(parsed);
-        }
+        setItems(sanitizeCartItems(parsed));
       }
     } catch (error) {
       console.error("Failed to parse cart from localStorage:", error);
@@ -56,6 +59,56 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
       setIsHydrated(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    let cancelled = false;
+
+    const reconcileWithActiveCatalog = async () => {
+      try {
+        const activeProducts = await fetchProducts();
+        if (cancelled) return;
+
+        const productsById = new Map(
+          activeProducts.map((product) => [product.id, product]),
+        );
+
+        setItems((prevItems) => {
+          const sanitizedItems = sanitizeCartItems(prevItems, productsById);
+          return JSON.stringify(sanitizedItems) === JSON.stringify(prevItems)
+            ? prevItems
+            : sanitizedItems;
+        });
+
+        const rawFavorites = JSON.parse(
+          localStorage.getItem("favorites") || "[]",
+        );
+        const sanitizedFavorites = sanitizeFavoriteIds(
+          rawFavorites,
+          activeProducts,
+        );
+
+        if (
+          JSON.stringify(rawFavorites) !== JSON.stringify(sanitizedFavorites)
+        ) {
+          localStorage.setItem("favorites", JSON.stringify(sanitizedFavorites));
+          window.dispatchEvent(new Event("favoritesChanged"));
+        }
+      } catch (error) {
+        console.error(
+          "Failed to reconcile cart/favorites with active catalog:",
+          error,
+        );
+      }
+    };
+
+    void reconcileWithActiveCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHydrated]);
 
   // Sync cart and favorites with Supabase when user signs in
   useEffect(() => {
@@ -75,8 +128,18 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
         const localCart = JSON.parse(
           localStorage.getItem("whiskerknots-cart") || "[]",
         );
-        const localFavorites = JSON.parse(
+        const localFavoritesRaw = JSON.parse(
           localStorage.getItem("favorites") || "[]",
+        );
+        const activeProducts = await fetchProducts();
+        const productsById = new Map(
+          activeProducts.map((product) => [product.id, product]),
+        );
+
+        const localCartSanitized = sanitizeCartItems(localCart, productsById);
+        const localFavorites = sanitizeFavoriteIds(
+          localFavoritesRaw,
+          activeProducts,
         );
 
         const remoteState = await dbUserState.fetchByUserId(user.uid);
@@ -90,27 +153,35 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
             : [];
 
           // Merge local and remote data (local takes precedence for cart)
-          const mergedCart = [...localCart];
+          const mergedCart = [...localCartSanitized];
           remoteCart.forEach((remoteItem: CartItem) => {
             const exists = mergedCart.find((item) => item.id === remoteItem.id);
             if (!exists) {
               mergedCart.push(remoteItem);
             }
           });
+          const sanitizedMergedCart = sanitizeCartItems(
+            mergedCart,
+            productsById,
+          );
 
           // Merge favorites (remove duplicates)
-          const mergedFavorites = [
-            ...new Set([...localFavorites, ...remoteFavorites]),
-          ];
+          const mergedFavorites = sanitizeFavoriteIds(
+            [...new Set([...localFavorites, ...remoteFavorites])],
+            activeProducts,
+          );
 
           // Update state and localStorage
-          setItems(mergedCart);
-          localStorage.setItem("whiskerknots-cart", JSON.stringify(mergedCart));
+          setItems(sanitizedMergedCart);
+          localStorage.setItem(
+            "whiskerknots-cart",
+            JSON.stringify(sanitizedMergedCart),
+          );
           localStorage.setItem("favorites", JSON.stringify(mergedFavorites));
 
           await dbUserState.upsert({
             userId: user.uid,
-            cart: mergedCart,
+            cart: sanitizedMergedCart,
             favorites: mergedFavorites,
           });
 
@@ -118,11 +189,20 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
           window.dispatchEvent(new Event("favoritesChanged"));
         } else {
           // No remote row - create one with local data
+          setItems(localCartSanitized);
+          localStorage.setItem(
+            "whiskerknots-cart",
+            JSON.stringify(localCartSanitized),
+          );
+          localStorage.setItem("favorites", JSON.stringify(localFavorites));
+
           await dbUserState.upsert({
             userId: user.uid,
-            cart: localCart,
+            cart: localCartSanitized,
             favorites: localFavorites,
           });
+
+          window.dispatchEvent(new Event("favoritesChanged"));
         }
       } catch (error) {
         const errorMsg = getReadableDbError(error);
@@ -179,6 +259,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
   }, [items, isHydrated, user]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
+    if (product.status !== "active") {
+      return;
+    }
+
     setItems((prevItems) => {
       const existingItem = prevItems.find((item) => item.id === product.id);
       if (existingItem) {

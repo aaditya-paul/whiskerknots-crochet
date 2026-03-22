@@ -6,6 +6,10 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
 import { SHIPPING_COST_THRESHOLD } from "@/constants/constants";
+import {
+  getProductPrimaryImage,
+  isUnoptimizedImageUrl,
+} from "../utils/productImages";
 
 const CartDrawer: React.FC = () => {
   const {
@@ -113,13 +117,13 @@ const CartDrawer: React.FC = () => {
                     {/* Image */}
                     <div className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
                       <Image
-                        src={
-                          item.image ||
-                          "https://picsum.photos/seed/cart-item/80/80"
-                        }
+                        src={getProductPrimaryImage(item)}
                         alt={item.name}
                         width={80}
                         height={80}
+                        unoptimized={isUnoptimizedImageUrl(
+                          getProductPrimaryImage(item),
+                        )}
                         className="w-full h-full object-cover"
                       />
                     </div>

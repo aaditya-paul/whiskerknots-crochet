@@ -1,4 +1,6 @@
 import { dbUserState, getReadableDbError } from "../lib/db";
+import { fetchProducts } from "../services/productCmsService";
+import { sanitizeFavoriteIds } from "./storeIntegrity";
 
 // Sync favorites to Supabase
 export const syncFavoritesToSupabase = async (
@@ -21,8 +23,21 @@ export const setupFavoritesSync = (userId: string | null) => {
   if (!userId) return;
 
   const handleFavoritesChange = () => {
-    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
-    syncFavoritesToSupabase(userId, favorites);
+    const sync = async () => {
+      const favoritesRaw = JSON.parse(
+        localStorage.getItem("favorites") || "[]",
+      );
+      const products = await fetchProducts();
+      const favorites = sanitizeFavoriteIds(favoritesRaw, products);
+
+      if (JSON.stringify(favoritesRaw) !== JSON.stringify(favorites)) {
+        localStorage.setItem("favorites", JSON.stringify(favorites));
+      }
+
+      await syncFavoritesToSupabase(userId, favorites);
+    };
+
+    void sync();
   };
 
   window.addEventListener("favoritesChanged", handleFavoritesChange);
